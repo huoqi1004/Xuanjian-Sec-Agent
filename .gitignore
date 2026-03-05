@@ -1,0 +1,45 @@
+# 依赖目录
+node_modules/
+backend/.venv/
+backend/__pycache__/
+backend/.mypy_cache/
+
+# 环境配置文件
+.env
+.env.local
+.env.*.local
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+
+# 日志文件
+logs/
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 测试文件
+coverage/
+.pytest_cache/
+
+# 数据库文件
+*.db
+*.sqlite3
+
+# 其他
+.env.example
