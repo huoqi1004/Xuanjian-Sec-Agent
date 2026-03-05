@@ -1,0 +1,7 @@
+# Self-Improving Agent Skill Requirements
+# No external dependencies required - uses standard library only
+
+# Optional dependencies for enhanced functionality
+# pandas>=1.5.0  # For advanced analytics
+# matplotlib>=3.5.0  # For visualization
+# numpy>=1.21.0  # For numerical analysis
