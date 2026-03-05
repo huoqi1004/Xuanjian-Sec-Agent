@@ -16,6 +16,7 @@ from .ai import router as ai_router
 from .security import router as security_router
 from .local_defense import router as local_defense_router
 from .advanced_defense import router as advanced_defense_router
+from .self_improving import router as self_improving_router
 
 api_router = APIRouter()
 
@@ -31,3 +32,4 @@ api_router.include_router(forensics_router, prefix="/forensics", tags=["Forensic
 api_router.include_router(workflow_router, prefix="/workflow", tags=["Workflow"])
 api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
 api_router.include_router(security_router, prefix="/security", tags=["Security Tools"])
+api_router.include_router(self_improving_router, prefix="/self-improving", tags=["Self-Improving Security"])

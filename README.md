@@ -37,6 +37,12 @@
   - 提权攻击阻止
   - 后门行为识别
 
+- 🧠 **自改进安全系统 (Self-Improving Security)**
+  - **自改进Agent**: 基于PDCA循环的持续学习与优化
+  - **自适应防御**: 实时威胁分析与防御策略动态调整
+  - **多Agent协同学习**: 多智能体知识共享与协作决策
+  - **知识图谱**: 威胁情报实体关系管理与智能查询
+
 ## 快速开始
 
 ### 环境要求
@@ -54,22 +60,40 @@
 git clone https://github.com/your-org/xuanjian-security.git
 cd xuanjian-security
 
-# 安装依赖
+# 安装后端依赖
 cd backend
 pip install -r requirements.txt
 
+# 安装前端依赖
+cd ../frontend
+npm install
+
 # 配置环境变量
+cd ../backend
 cp .env.example .env
 # 编辑 .env 文件，填写你的API密钥
 
 # 初始化数据库
 alembic upgrade head
-
-# 启动服务
-python -m app.main
 ```
 
-### 使用Docker Compose (推荐)
+### 启动服务
+
+**方式一: 手动启动 (开发环境)**
+
+```bash
+# 终端1: 启动后端服务
+cd backend
+python -m app.main
+# 后端服务运行在 http://localhost:8001
+
+# 终端2: 启动前端服务
+cd frontend
+npm run dev
+# 前端服务运行在 http://localhost:5173
+```
+
+**方式二: 使用Docker Compose (推荐生产环境)**
 
 ```bash
 # 启动所有服务
@@ -81,6 +105,12 @@ docker-compose logs -f
 # 停止服务
 docker-compose down
 ```
+
+### 访问服务
+
+- **前端界面**: http://localhost:5173
+- **后端API**: http://localhost:8001
+- **API文档**: http://localhost:8001/api/docs (Swagger UI)
 
 ## 配置指南
 
@@ -201,6 +231,205 @@ workflow = WorkflowDefinition(
 )
 ```
 
+### 自改进安全系统
+
+玄鉴安全智能体集成了先进的自改进安全能力，实现持续学习与动态防御。
+
+#### 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              自改进安全系统 (Self-Improving Security)          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ 自改进Agent   │  │ 自适应防御    │  │ 多Agent协同   │       │
+│  │ Self-Improving│  │ Adaptive     │  │ Multi-Agent  │       │
+│  │ Agent         │  │ Defense      │  │ Learning     │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+│         │                 │                 │               │
+│         └─────────────────┼─────────────────┘               │
+│                           │                                 │
+│                  ┌────────▼────────┐                       │
+│                  │   知识图谱       │                       │
+│                  │ Knowledge Graph │                       │
+│                  └─────────────────┘                       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### 核心组件
+
+**1. 自改进Agent (Self-Improving Agent)**
+
+基于PDCA循环和反思实践模型的持续学习系统：
+
+```python
+from app.services.self_improving_agent import get_self_improving_agent
+
+# 获取自改进Agent
+agent = get_self_improving_agent()
+
+# 执行任务反思
+reflection = agent.reflect_on_task(
+    task_description="执行Nmap扫描任务",
+    outcome="成功发现5台在线主机",
+    challenges=["扫描速度慢", "部分主机无响应"]
+)
+
+# 生成改进计划
+initiative = agent.create_improvement_initiative(
+    area="扫描性能",
+    description="优化Nmap扫描参数以提高效率",
+    goals=["减少扫描时间50%", "提高主机发现率"]
+)
+```
+
+**2. 自适应防御系统 (Adaptive Defense)**
+
+实时威胁分析与防御策略动态调整：
+
+```python
+from app.services.adaptive_defense import get_adaptive_defense_system
+
+# 获取自适应防御系统
+defense = get_adaptive_defense_system()
+
+# 分析威胁
+threat = defense.analyze_threat({
+    "type": "brute_force",
+    "source": "192.168.1.100",
+    "severity": "high",
+    "details": {"attempts": 100, "target": "ssh"}
+})
+
+# 获取当前防御状态
+status = defense.get_defense_status()
+print(f"防御模式: {status['defense_mode']}")
+print(f"威胁等级: {status['threat_level']}")
+```
+
+**3. 多Agent协同学习 (Multi-Agent Learning)**
+
+多智能体知识共享与协作决策：
+
+```python
+from app.services.multi_agent_learning import get_multi_agent_learning, AgentType
+
+# 获取多Agent学习系统
+learning = get_multi_agent_learning()
+
+# 注册Agent
+learning.register_agent(
+    agent_id="scanner_agent_01",
+    agent_type=AgentType.SCANNER,
+    capabilities=["port_scan", "service_detection"],
+    metadata={"location": "datacenter_a"}
+)
+
+# 分享知识
+learning.share_knowledge(
+    agent_id="scanner_agent_01",
+    knowledge_type="scan_technique",
+    content={"technique": "fast_syn_scan", "effectiveness": 0.95}
+)
+
+# 获取Agent网络统计
+stats = learning.get_network_stats()
+print(f"活跃Agent数: {stats['active_count']}")
+print(f"知识分享数: {stats['knowledge_shared']}")
+```
+
+**4. 知识图谱 (Knowledge Graph)**
+
+威胁情报实体关系管理与智能查询：
+
+```python
+from app.services.knowledge_graph import get_knowledge_graph, EntityType, RelationshipType
+
+# 获取知识图谱
+kg = get_knowledge_graph()
+
+# 添加威胁实体
+threat_id = kg.add_entity(
+    entity_type=EntityType.THREAT,
+    name="APT29",
+    properties={"aliases": ["Cozy Bear"], "origin": "Russia"},
+    sources=["mitre-attack"]
+)
+
+# 添加关系
+kg.add_relationship(
+    source_id=threat_id,
+    target_id="malware_id_123",
+    relation_type=RelationshipType.USES,
+    properties={"first_seen": "2024-01-01"}
+)
+
+# 查询知识
+results = kg.query_knowledge("APT29使用的恶意软件")
+```
+
+#### API接口
+
+自改进系统提供完整的REST API接口：
+
+```bash
+# 处理安全事件
+curl -X POST http://localhost:8000/api/v1/self-improving/security-event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "intrusion_detection",
+    "source": "192.168.1.100",
+    "severity": "high",
+    "details": {"attack_type": "sql_injection"},
+    "indicators": ["192.168.1.100", "malicious.com"]
+  }'
+
+# 添加威胁情报
+curl -X POST http://localhost:8000/api/v1/self-improving/threat-intelligence \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "新型勒索软件",
+    "category": "ransomware",
+    "severity": "critical",
+    "description": "针对企业网络的勒索软件",
+    "indicators": ["hash123", "domain.evil"]
+  }'
+
+# 执行反思
+curl -X POST http://localhost:8000/api/v1/self-improving/reflection \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_description": "执行漏洞扫描",
+    "outcome": "发现3个高危漏洞",
+    "challenges": ["扫描范围过大"]
+  }'
+
+# 查询知识图谱
+curl -X POST http://localhost:8000/api/v1/self-improving/knowledge/query \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "APT攻击组织",
+    "knowledge_types": ["threat", "actor"]
+  }'
+```
+
+#### 工作原理
+
+1. **持续学习循环 (PDCA)**
+   - **Plan**: 分析历史数据，制定改进计划
+   - **Do**: 执行安全任务，收集执行数据
+   - **Check**: 评估执行效果，识别改进点
+   - **Act**: 实施改进措施，更新知识库
+
+2. **自适应防御流程**
+   - 威胁检测 → 威胁分析 → 策略选择 → 防御执行 → 效果评估 → 策略优化
+
+3. **多Agent协作机制**
+   - Agent注册 → 能力广播 → 任务分配 → 知识共享 → 协同决策
+
+4. **知识图谱更新**
+   - 实体抽取 → 关系识别 → 知识融合 → 图谱更新 → 一致性校验
+
 ## 架构设计
 
 详细架构设计请参考 [ARCHITECTURE.md](ARCHITECTURE.md)
@@ -208,26 +437,30 @@ workflow = WorkflowDefinition(
 ### 六层架构
 
 ```
-┌─────────────────────────────────────────────┐
-│     数据可视化层 (Dashboard/SOC)   │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────▼──────────────────────┐
-│       API网关层 (FastAPI/Fastify)    │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────▼──────────────────────┐
-│      协调编排层 (Workflow Engine)      │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────▼──────────────────────┐
-│       AI智能层 (Supervisor + Executor) │
-└──────────────────┬──────────────────────┘
-                   │
-┌──────────────────▼──────────────────────┐
-│    安全工具层 (MCP Protocol Tools)    │
-│  ThreatIntel | Scanner | Analysis | Defense│
-└───────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│              数据可视化层 (Dashboard/SOC)                   │
+│         React + Vite + WebSocket实时监控                    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│               API网关层 (FastAPI/Fastify)                   │
+│         RESTful API + WebSocket + 认证授权                   │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│              协调编排层 (Workflow Engine)                   │
+│         DAG工作流 + 并行/串行执行 + 条件分支                  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│     AI智能层 (Supervisor + Executor + Self-Improving)       │
+│  监督模型 | 执行模型 | 自改进Agent | 自适应防御 | 多Agent协同 │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────────┐
+│          安全工具层 (MCP Protocol Tools)                    │
+│  ThreatIntel | Scanner | Analysis | Defense | KnowledgeGraph│
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## 安全防护
@@ -387,17 +620,27 @@ curl -X GET "localhost:9200/_cat/indices"
 
 ## 开发路线图
 
-### v1.1.0 (计划中)
+### v1.1.0 (当前版本)
+- [x] 自改进Agent系统 (PDCA循环、反思实践)
+- [x] 自适应防御系统 (实时威胁分析、动态策略调整)
+- [x] 多Agent协同学习 (知识共享、协作决策)
+- [x] 知识图谱系统 (威胁情报管理、智能查询)
 - [ ] MISP威胁情报平台集成
 - [ ] Shodan搜索引擎集成
 - [ ] 多模态威胁分析
+
+### v1.2.0 (计划中)
 - [ ] 图神经网络威胁建模
+- [ ] 自动化渗透测试
+- [ ] 威胁狩猎自动化
+- [ ] SOAR平台集成
 
 ### v2.0.0 (规划中)
 - [ ] 联邦学习隐私保护
 - [ ] 零日学习异常检测
 - [ ] 强化学习防御策略优化
 - [ ] 边缘计算支持
+- [ ] 量子安全算法
 
 ## 联系我们
 
