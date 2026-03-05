@@ -1,4 +1,4 @@
- # 玄鉴安全智能体 (XuanJian Security Agent)
+# 玄鉴安全智能体 (XuanJian Security Agent)
 
 > AI驱动的企业级网络安全解决方案
 
@@ -57,8 +57,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/xuanjian-security.git
-cd xuanjian-security
+git clone https://github.com/huoqi1004/Xuanjian-Sec-Agent.git
+cd Xuanjian-Sec-Agent
 
 # 安装后端依赖
 cd backend
@@ -645,12 +645,7 @@ curl -X GET "localhost:9200/_cat/indices"
 ## 联系我们
 
 - 📧 邮箱: 1716669652@qq.com
-- 💬 微信群: 玄鉴安全智能体
-- 📊 监控: [Grafana Dashboard](http://localhost:3000)
-- 📚 文档: [技术文档](https://docs.xuanjian.ai)
-
----
-
+- 💬 微信:txw20000701
 **玄鉴安全智能体** - AI守护企业网络安全
 
 ```
