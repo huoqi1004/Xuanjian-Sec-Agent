@@ -644,7 +644,7 @@ curl -X GET "localhost:9200/_cat/indices"
 
 ## 联系我们
 
-- 📧 邮箱: security@xuanjian.ai
+- 📧 邮箱: 1716669652@qq.com
 - 💬 微信群: 玄鉴安全智能体
 - 📊 监控: [Grafana Dashboard](http://localhost:3000)
 - 📚 文档: [技术文档](https://docs.xuanjian.ai)
