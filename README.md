@@ -57,8 +57,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://github.com/your-org/xuanjian-security.git
-cd xuanjian-security
+git clone https://github.com/huoqi1004/Xuanjian-Sec-Agent.git
+cd Xuanjian-Sec-Agent
 
 # 安装后端依赖
 cd backend
