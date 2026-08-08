@@ -1,0 +1,31 @@
+# 阶段1：构建前端
+FROM node:18-alpine AS frontend-builder
+WORKDIR /app/frontend-app
+COPY frontend-app/package.json ./
+RUN npm install
+COPY frontend-app/ ./
+RUN npm run build
+
+# 阶段2：服务端
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 安装构建依赖
+RUN apk add --no-cache python3 make g++
+
+# 复制服务端代码
+COPY server/package.json ./
+RUN npm install --production
+
+COPY server/ ./
+
+# 复制前端构建产物
+COPY --from=frontend-builder /app/frontend-app/dist ./frontend-app/dist
+
+# 创建必要目录
+RUN mkdir -p data logs uploads
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]

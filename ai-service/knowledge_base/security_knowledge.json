@@ -1,0 +1,106 @@
+[
+  {
+    "id": "kb-001",
+    "category": "CVE",
+    "title": "CVE-2024-3094 XZ Utils后门漏洞",
+    "content": "XZ Utils 5.6.0和5.6.1版本中存在恶意后门代码，攻击者通过供应链攻击注入恶意代码，可在SSH认证过程中远程执行代码。影响范围：使用liblzma的系统。修复方案：降级到XZ Utils 5.4.x版本。严重等级：严重(10.0)。",
+    "keywords": ["XZ", "后门", "供应链攻击", "SSH", "liblzma"],
+    "severity": "critical"
+  },
+  {
+    "id": "kb-002",
+    "category": "CVE",
+    "title": "CVE-2024-21762 FortiOS越界写入漏洞",
+    "content": "Fortinet FortiOS SSL VPN组件存在越界写入漏洞(CVE-2024-21762)，允许未经身份验证的远程攻击者通过特制HTTP请求执行任意代码。CVSS评分9.8。修复方案：升级到FortiOS最新版本。临时缓解：禁用SSL VPN。",
+    "keywords": ["FortiOS", "SSL VPN", "RCE", "越界写入"],
+    "severity": "critical"
+  },
+  {
+    "id": "kb-003",
+    "category": "合规",
+    "title": "等保2.0安全通信网络要求",
+    "content": "等保2.0三级要求：通信传输应采用密码技术进行完整性保护和保密性保护。应采用校验技术或密码技术保证通信过程中数据的完整性。应采用密码技术保证通信过程中数据的保密性。网络边界应部署访问控制设备并启用访问控制策略。",
+    "keywords": ["等保2.0", "安全通信", "加密", "访问控制"],
+    "severity": "high"
+  },
+  {
+    "id": "kb-004",
+    "category": "最佳实践",
+    "title": "Linux服务器安全加固最佳实践",
+    "content": "1.禁用root远程登录(PermitRootLogin no) 2.使用SSH密钥认证替代密码 3.配置fail2ban防止暴力破解 4.定期更新系统补丁 5.配置防火墙仅开放必要端口 6.启用SELinux/AppArmor 7.配置日志审计 8.定期备份关键数据",
+    "keywords": ["Linux", "安全加固", "SSH", "防火墙", "fail2ban"],
+    "severity": "medium"
+  },
+  {
+    "id": "kb-005",
+    "category": "威胁情报",
+    "title": "APT攻击常见TTPs",
+    "content": "高级持续性威胁(APT)常见战术技术模式：初始访问-钓鱼邮件/供应链攻击；持久化-计划任务/注册表/启动项；权限提升-内核漏洞/提权工具；横向移动-Pass-the-Hash/RDP/WMI；数据渗出-DNS隧道/加密通道。防御建议：网络分段、行为监控、最小权限原则。",
+    "keywords": ["APT", "TTPs", "横向移动", "权限提升", "钓鱼"],
+    "severity": "high"
+  },
+  {
+    "id": "kb-006",
+    "category": "合规",
+    "title": "CIS Controls v8关键安全控制",
+    "content": "CIS Controls v8包含18个控制域：清单和资产控制、软件资产管理、数据资产管理、安全配置管理、账户管理、访问控制管理、持续漏洞管理、审计日志管理、邮件和网页安全、恶意软件防御、数据恢复、网络基础设施管理、网络监控和防御、安全意识培训、服务提供商管理、应用软件安全、事故响应管理、渗透测试。",
+    "keywords": ["CIS", "安全控制", "最佳实践", "合规"],
+    "severity": "medium"
+  },
+  {
+    "id": "kb-007",
+    "category": "最佳实践",
+    "title": "恶意代码分析常用技术",
+    "content": "静态分析：PE文件结构分析、导入表检查、字符串提取、熵值分析、反汇编。动态分析：沙箱执行、API监控、网络行为分析、注册表监控。机器学习检测：基于API调用序列、基于N-gram、基于控制流图、基于深度学习(Transformer/CNN)。多引擎协同：哈希匹配+AI模型+行为分析。",
+    "keywords": ["恶意代码", "静态分析", "动态分析", "沙箱", "机器学习"],
+    "severity": "medium"
+  },
+  {
+    "id": "kb-008",
+    "category": "CVE",
+    "title": "Log4Shell漏洞(CVE-2021-44228)",
+    "content": "Apache Log4j2存在JNDI注入漏洞，攻击者可通过构造恶意日志消息实现远程代码执行。影响范围极广，影响所有使用Log4j 2.0-2.14.1的Java应用。修复方案：升级到Log4j 2.17.1+。临时缓解：设置系统属性log4j2.formatMsgNoLookups=true。",
+    "keywords": ["Log4j", "JNDI", "RCE", "Java"],
+    "severity": "critical"
+  },
+  {
+    "id": "kb-009",
+    "category": "合规",
+    "title": "等保2.0 GB/T 22239-2019 安全通用要求",
+    "content": "等级保护2.0安全通用要求包括安全物理环境、安全通信网络、安全区域边界、安全计算环境、安全管理中心五个技术层面，以及安全管理制度、安全管理机构、安全管理人员、安全建设管理、安全运维管理五个管理层面。第三级系统要求：身份鉴别（双因素/复杂度）、访问控制（最小权限）、安全审计（审计覆盖）、入侵防范、恶意代码防范、数据保密性、数据完整性、可信验证、数据备份恢复。",
+    "keywords": ["等保2.0", "GB/T 22239", "等级保护", "三级", "安全要求"],
+    "severity": "high"
+  },
+  {
+    "id": "kb-010",
+    "category": "合规",
+    "title": "CIS Benchmark SSH 安全配置",
+    "content": "CIS基准SSH加固要求：1.禁用root直接登录(PermitRootLogin no) 2.设置协议版本2(Protocol 2) 3.禁用空密码登录(PermitEmptyPasswords no) 4.设置登录超时(ClientAliveInterval 300) 5.限制最大认证次数(MaxAuthTries 4) 6.禁用X11转发 7.使用密钥认证 8.配置AllowUsers限制可登录用户。违规风险：暴力破解、未授权访问、中间人攻击。",
+    "keywords": ["CIS", "SSH", "加固", "PermitRootLogin", "基线"],
+    "severity": "high"
+  },
+  {
+    "id": "kb-011",
+    "category": "威胁情报",
+    "title": "暴力破解攻击检测与处置",
+    "content": "暴力破解特征：短时间内多次认证失败（如SSH/RDP/Web登录）、同一来源IP高频请求、失败后成功登录。检测指标：认证失败次数、失败来源IP聚合、时间窗口统计。处置建议：1.启用fail2ban自动封禁(5次失败后封禁30分钟) 2.禁用root远程登录 3.启用账号锁定策略(5次失败锁定15分钟) 4.限制来源IP白名单 5.部署多因素认证 6.监控成功登录后的异常行为。",
+    "keywords": ["暴力破解", "brute force", "fail2ban", "账号锁定", "处置"],
+    "severity": "high"
+  },
+  {
+    "id": "kb-012",
+    "category": "威胁情报",
+    "title": "勒索软件应急处置流程",
+    "content": "勒索软件事件处置：1.立即隔离受影响主机（断网/断开存储） 2.保护证据（保留日志、加密样本、支付赎金沟通记录） 3.确定感染范围（扫描内网横向传播） 4.查找加密密钥/解密工具 5.从可信备份恢复数据 6.排查并封堵初始入口（钓鱼/漏洞/RDP暴露） 7.加固并轮换所有凭据 8.复盘并更新应急响应预案。注意：不建议支付赎金。",
+    "keywords": ["勒索软件", "ransomware", "应急响应", "隔离", "备份恢复"],
+    "severity": "critical"
+  },
+  {
+    "id": "kb-013",
+    "category": "最佳实践",
+    "title": "开放端口风险与收敛建议",
+    "content": "常见服务端口风险：22/SSH暴露易遭暴力破解、3306/MySQL直接暴露可导致未授权访问、6379/Redis未授权、3389/RDP暴露易被爆破、445/SMB易受勒索软件利用。收敛建议：1.仅开放业务必需端口 2.数据库/管理端口仅内网可达 3.公网访问加WAF/CDN 4.启用访问控制白名单 5.定期端口扫描核查漂移 6.高危端口变更审批留痕。",
+    "keywords": ["端口", "开放端口", "暴露", "收敛", "风险"],
+    "severity": "medium"
+  }
+]

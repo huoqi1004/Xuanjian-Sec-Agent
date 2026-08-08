@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>玄鉴安全智能体 - 登录</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: #0a0a1a;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .login-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+        }
+
+        /* Animated background particles */
+        .bg-particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: #00d4ff;
+            border-radius: 50%;
+            opacity: 0;
+            animation: float-particle 6s infinite;
+        }
+
+        .particle:nth-child(1) { left: 10%; top: 20%; animation-delay: 0s; animation-duration: 8s; }
+        .particle:nth-child(2) { left: 20%; top: 80%; animation-delay: 1s; animation-duration: 6s; }
+        .particle:nth-child(3) { left: 30%; top: 40%; animation-delay: 2s; animation-duration: 7s; }
+        .particle:nth-child(4) { left: 40%; top: 60%; animation-delay: 0.5s; animation-duration: 9s; }
+        .particle:nth-child(5) { left: 50%; top: 30%; animation-delay: 1.5s; animation-duration: 5s; }
+        .particle:nth-child(6) { left: 60%; top: 70%; animation-delay: 3s; animation-duration: 8s; }
+        .particle:nth-child(7) { left: 70%; top: 10%; animation-delay: 2.5s; animation-duration: 6s; }
+        .particle:nth-child(8) { left: 80%; top: 50%; animation-delay: 0.8s; animation-duration: 7s; }
+        .particle:nth-child(9) { left: 90%; top: 90%; animation-delay: 1.2s; animation-duration: 9s; }
+        .particle:nth-child(10) { left: 15%; top: 55%; animation-delay: 2.2s; animation-duration: 6s; }
+        .particle:nth-child(11) { left: 25%; top: 15%; animation-delay: 3.5s; animation-duration: 8s; }
+        .particle:nth-child(12) { left: 35%; top: 85%; animation-delay: 0.3s; animation-duration: 7s; }
+        .particle:nth-child(13) { left: 45%; top: 25%; animation-delay: 1.8s; animation-duration: 5s; }
+        .particle:nth-child(14) { left: 55%; top: 65%; animation-delay: 2.8s; animation-duration: 9s; }
+        .particle:nth-child(15) { left: 65%; top: 45%; animation-delay: 0.6s; animation-duration: 6s; }
+        .particle:nth-child(16) { left: 75%; top: 75%; animation-delay: 1.1s; animation-duration: 8s; }
+        .particle:nth-child(17) { left: 85%; top: 35%; animation-delay: 2.1s; animation-duration: 7s; }
+        .particle:nth-child(18) { left: 95%; top: 55%; animation-delay: 3.2s; animation-duration: 5s; }
+        .particle:nth-child(19) { left: 5%; top: 45%; animation-delay: 0.9s; animation-duration: 9s; }
+        .particle:nth-child(20) { left: 55%; top: 5%; animation-delay: 2.6s; animation-duration: 6s; }
+
+        @keyframes float-particle {
+            0% { opacity: 0; transform: translateY(0) scale(1); }
+            20% { opacity: 0.8; }
+            80% { opacity: 0.3; }
+            100% { opacity: 0; transform: translateY(-100px) scale(2); }
+        }
+
+        /* Grid lines background */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 0;
+        }
+
+        /* Glow orbs */
+        .glow-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 0;
+        }
+
+        .glow-orb-1 {
+            width: 300px;
+            height: 300px;
+            background: rgba(0, 212, 255, 0.15);
+            top: -100px;
+            right: -50px;
+            animation: pulse-glow 4s ease-in-out infinite;
+        }
+
+        .glow-orb-2 {
+            width: 250px;
+            height: 250px;
+            background: rgba(124, 58, 237, 0.15);
+            bottom: -80px;
+            left: -50px;
+            animation: pulse-glow 5s ease-in-out infinite reverse;
+        }
+
+        .glow-orb-3 {
+            width: 200px;
+            height: 200px;
+            background: rgba(0, 212, 255, 0.08);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-glow 6s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        /* Login card */
+        .login-card {
+            position: relative;
+            z-index: 10;
+            width: 420px;
+            padding: 50px 40px;
+            background: rgba(22, 33, 62, 0.85);
+            border: 1px solid rgba(0, 212, 255, 0.2);
+            border-radius: 16px;
+            backdrop-filter: blur(20px);
+            box-shadow:
+                0 0 30px rgba(0, 212, 255, 0.1),
+                0 0 60px rgba(0, 212, 255, 0.05),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 20%;
+            right: 20%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+            border-radius: 2px;
+        }
+
+        /* Logo section */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+
+        .logo-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .logo-title {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .logo-subtitle {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 4px;
+        }
+
+        /* Form styles */
+        .login-form .el-form-item {
+            margin-bottom: 24px;
+        }
+
+        .login-form .el-input__wrapper {
+            background: rgba(10, 10, 26, 0.6) !important;
+            border: 1px solid rgba(0, 212, 255, 0.15) !important;
+            border-radius: 8px !important;
+            box-shadow: none !important;
+            padding: 4px 15px !important;
+            height: 46px !important;
+            transition: all 0.3s ease;
+        }
+
+        .login-form .el-input__wrapper:hover {
+            border-color: rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .login-form .el-input__wrapper.is-focus {
+            border-color: #00d4ff !important;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.15) !important;
+        }
+
+        .login-form .el-input__inner {
+            color: #e0e0e0 !important;
+            font-size: 14px;
+        }
+
+        .login-form .el-input__inner::placeholder {
+            color: rgba(255, 255, 255, 0.3) !important;
+        }
+
+        .login-form .el-input__prefix .el-icon {
+            color: rgba(0, 212, 255, 0.6) !important;
+            font-size: 16px;
+        }
+
+        .login-form .el-form-item__label {
+            color: rgba(255, 255, 255, 0.7) !important;
+            font-size: 13px;
+            padding-bottom: 6px !important;
+        }
+
+        .login-form .el-form-item__error {
+            padding-top: 4px;
+        }
+
+        /* Login button */
+        .login-btn {
+            width: 100%;
+            height: 46px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 4px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #00d4ff, #7c3aed);
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 25px rgba(0, 212, 255, 0.3);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .login-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(transparent, rgba(255, 255, 255, 0.1), transparent);
+            transform: rotate(45deg);
+            animation: btn-shine 3s infinite;
+        }
+
+        @keyframes btn-shine {
+            0% { transform: translateX(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) rotate(45deg); }
+        }
+
+        /* Remember me */
+        .login-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .login-options .el-checkbox__label {
+            color: rgba(255, 255, 255, 0.5) !important;
+            font-size: 13px;
+        }
+
+        .login-options .el-checkbox__inner {
+            background: rgba(10, 10, 26, 0.6) !important;
+            border-color: rgba(0, 212, 255, 0.3) !important;
+        }
+
+        .login-options .el-checkbox__input.is-checked .el-checkbox__inner {
+            background: #00d4ff !important;
+            border-color: #00d4ff !important;
+        }
+
+        .forgot-link {
+            color: rgba(0, 212, 255, 0.7);
+            font-size: 13px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .forgot-link:hover {
+            color: #00d4ff;
+        }
+
+        /* Version info */
+        .version-info {
+            text-align: center;
+            margin-top: 30px;
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+        }
+
+        /* Override Element Plus dark theme */
+        .el-loading-mask {
+            background-color: rgba(10, 10, 26, 0.8) !important;
+        }
+
+        .el-message {
+            border-radius: 8px !important;
+        }
+
+        /* Scan line effect */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.3), transparent);
+            animation: scan 4s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+
+        /* Hexagon decoration */
+        .hex-decoration {
+            position: absolute;
+            z-index: 1;
+        }
+
+        .hex-decoration.top-right {
+            top: 30px;
+            right: 30px;
+        }
+
+        .hex-decoration.bottom-left {
+            bottom: 30px;
+            left: 30px;
+        }
+
+        .hex-ring {
+            width: 120px;
+            height: 120px;
+            border: 1px solid rgba(0, 212, 255, 0.08);
+            border-radius: 50%;
+            position: relative;
+            animation: hex-rotate 20s linear infinite;
+        }
+
+        .hex-ring::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 1px solid rgba(124, 58, 237, 0.1);
+            border-radius: 50%;
+        }
+
+        .hex-ring::after {
+            content: '';
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            right: 25px;
+            bottom: 25px;
+            border: 1px solid rgba(0, 212, 255, 0.06);
+            border-radius: 50%;
+        }
+
+        @keyframes hex-rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="login-container">
+            <!-- Background effects -->
+            <div class="grid-bg"></div>
+            <div class="scan-line"></div>
+            <div class="glow-orb glow-orb-1"></div>
+            <div class="glow-orb glow-orb-2"></div>
+            <div class="glow-orb glow-orb-3"></div>
+            <div class="bg-particles">
+                <div class="particle" v-for="n in 20" :key="n"></div>
+            </div>
+
+            <!-- Decorations -->
+            <div class="hex-decoration top-right">
+                <div class="hex-ring"></div>
+            </div>
+            <div class="hex-decoration bottom-left">
+                <div class="hex-ring"></div>
+            </div>
+
+            <!-- Login Card -->
+            <div class="login-card">
+                <div class="logo-section">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+                                    <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+                                </linearGradient>
+                                <filter id="glow">
+                                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
+                            </defs>
+                            <!-- Shield shape -->
+                            <path d="M50 8 L88 28 L88 55 C88 75 70 90 50 96 C30 90 12 75 12 55 L12 28 Z"
+                                  fill="none" stroke="url(#logoGrad)" stroke-width="2.5" filter="url(#glow)"/>
+                            <!-- Inner shield -->
+                            <path d="M50 18 L78 33 L78 55 C78 70 65 82 50 87 C35 82 22 70 22 55 L22 33 Z"
+                                  fill="rgba(0,212,255,0.05)" stroke="rgba(0,212,255,0.3)" stroke-width="1"/>
+                            <!-- Lock icon -->
+                            <rect x="38" y="45" width="24" height="20" rx="3" fill="none" stroke="#00d4ff" stroke-width="2"/>
+                            <path d="M42 45 L42 38 C42 32 46 28 50 28 C54 28 58 32 58 38 L58 45"
+                                  fill="none" stroke="#00d4ff" stroke-width="2"/>
+                            <circle cx="50" cy="55" r="3" fill="#00d4ff"/>
+                            <line x1="50" y1="58" x2="50" y2="62" stroke="#00d4ff" stroke-width="2"/>
+                            <!-- GPT text -->
+                            <text x="50" y="78" text-anchor="middle" fill="url(#logoGrad)" font-size="10" font-weight="bold" font-family="Arial">GPT</text>
+                        </svg>
+                    </div>
+                    <h1 class="logo-title">玄鉴安全智能体</h1>
+                    <p class="logo-subtitle">多引擎协同安全评估系统</p>
+                </div>
+
+                <el-form ref="loginFormRef" :model="loginForm" :rules="loginRules" class="login-form" @keyup.enter="handleLogin">
+                    <el-form-item label="用户名" prop="username">
+                        <el-input v-model="loginForm.username" placeholder="请输入用户名" prefix-icon="User" size="large" />
+                    </el-form-item>
+                    <el-form-item label="密码" prop="password">
+                        <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" prefix-icon="Lock" size="large" show-password />
+                    </el-form-item>
+
+                    <div class="login-options">
+                        <el-checkbox v-model="loginForm.remember">记住我</el-checkbox>
+                        <a class="forgot-link" @click="showForgotTip">忘记密码?</a>
+                    </div>
+
+                    <el-form-item>
+                        <button type="button" class="login-btn" @click="handleLogin" :disabled="loading">
+                            {{ loading ? '登录中...' : '登 录' }}
+                        </button>
+                    </el-form-item>
+                </el-form>
+
+                <div class="version-info">
+                    v2.0.0 | Powered by Multi-Engine AI Security
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://unpkg.com/@element-plus/icons-vue"></script>
+    <script>
+        const { createApp, ref, reactive, onMounted } = Vue;
+
+        const app = createApp({
+            setup() {
+                const loginFormRef = ref(null);
+                const loading = ref(false);
+
+                const loginForm = reactive({
+                    username: '',
+                    password: '',
+                    remember: false
+                });
+
+                const loginRules = {
+                    username: [
+                        { required: true, message: '请输入用户名', trigger: 'blur' },
+                        { min: 3, max: 20, message: '用户名长度在3到20个字符', trigger: 'blur' }
+                    ],
+                    password: [
+                        { required: true, message: '请输入密码', trigger: 'blur' },
+                        { min: 6, max: 32, message: '密码长度在6到32个字符', trigger: 'blur' }
+                    ]
+                };
+
+                // Load saved credentials
+                onMounted(() => {
+                    const saved = localStorage.getItem('xuanjian_remember');
+                    if (saved) {
+                        try {
+                            const data = JSON.parse(saved);
+                            loginForm.username = data.username || '';
+                            loginForm.password = data.password || '';
+                            loginForm.remember = true;
+                        } catch (e) {}
+                    }
+                });
+
+                const handleLogin = async () => {
+                    if (!loginFormRef.value) return;
+                    try {
+                        await loginFormRef.value.validate();
+                    } catch (e) {
+                        return;
+                    }
+
+                    loading.value = true;
+                    try {
+                        const response = await fetch('http://localhost:3000/api/auth/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                username: loginForm.username,
+                                password: loginForm.password
+                            })
+                        });
+                        const data = await response.json();
+
+                        if (data.code === 0 && data.data && data.data.token) {
+                            // Save token
+                            localStorage.setItem('xuanjian_token', data.data.token);
+                            localStorage.setItem('xuanjian_user', JSON.stringify(data.data.user || { username: loginForm.username }));
+
+                            // Remember me
+                            if (loginForm.remember) {
+                                localStorage.setItem('xuanjian_remember', JSON.stringify({
+                                    username: loginForm.username,
+                                    password: loginForm.password
+                                }));
+                            } else {
+                                localStorage.removeItem('xuanjian_remember');
+                            }
+
+                            ElementPlus.ElMessage.success('登录成功，正在跳转...');
+                            setTimeout(() => {
+                                window.location.href = 'index.html';
+                            }, 800);
+                        } else {
+                            ElementPlus.ElMessage.error(data.message || '登录失败，请检查用户名和密码');
+                        }
+                    } catch (error) {
+                        console.error('Login error:', error);
+                        // Demo mode: allow login with any credentials
+                        ElementPlus.ElMessage.warning('无法连接到服务器，进入演示模式');
+                        setTimeout(() => {
+                            localStorage.setItem('xuanjian_token', 'demo-token-' + Date.now());
+                            localStorage.setItem('xuanjian_user', JSON.stringify({
+                                username: loginForm.username,
+                                role: loginForm.username === 'admin' ? 'admin' : 'user',
+                                department: '安全运营中心'
+                            }));
+                            window.location.href = 'index.html';
+                        }, 1000);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                const showForgotTip = () => {
+                    ElementPlus.ElMessage.info('请联系系统管理员重置密码');
+                };
+
+                return {
+                    loginFormRef,
+                    loginForm,
+                    loginRules,
+                    loading,
+                    handleLogin,
+                    showForgotTip
+                };
+            }
+        });
+
+        // Register Element Plus icons
+        for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+            app.component(key, component);
+        }
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+</html>

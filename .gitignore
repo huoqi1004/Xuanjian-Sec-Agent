@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+
+# 运行时数据（含持久化数据库、上传文件）
+data/
+logs/
+server/data/
+server/uploads/
+uploads/
+
+# 环境变量（含密钥）
+.env
+.env.local
+
+# 构建产物
+frontend-app/dist/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
+ai-service/.venv/
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 测试产物
+coverage/

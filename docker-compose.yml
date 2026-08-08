@@ -1,0 +1,87 @@
+version: '3.8'
+
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - JWT_SECRET=${JWT_SECRET:-xuanjian_security_agent_jwt_secret_key_2024}
+      - JWT_EXPIRES_IN=24h
+      # N-06 数据层：默认 SQLite；切换真实库设 DB_DRIVER=mysql 并填写连接信息
+      - DB_DRIVER=${DB_DRIVER:-sqlite}
+      - DB_PATH=/app/data/security.db
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-xuanjian}
+      - DB_PASSWORD=${DB_PASSWORD:-}
+      - DB_NAME=${DB_NAME:-xuanjian}
+      - AI_SERVICE_URL=http://ai-service:5000
+      - VIRUSTOTAL_API_KEY=${VIRUSTOTAL_API_KEY:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.openai.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+      - SCAN_MAX_CONCURRENCY=100
+      - SCAN_TIMEOUT=5000
+      - DEVICE_HEARTBEAT_TIMEOUT=60
+      - THREAT_INTEL_INTERVAL=30
+      - LOG_LEVEL=info
+    volumes:
+      - server-data:/app/data
+      - server-logs:/app/logs
+      - server-uploads:/app/uploads
+    depends_on:
+      - ai-service
+    restart: unless-stopped
+    networks:
+      - xuanjian-net
+
+  # N-06 生产数据库（可选，默认 profile 不启动；启用真实库时 docker compose --profile mysql up）
+  mysql:
+    image: mysql:8.0
+    profiles: ["mysql"]
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root123456}
+      - MYSQL_DATABASE=${DB_NAME:-xuanjian}
+      - MYSQL_USER=${DB_USER:-xuanjian}
+      - MYSQL_PASSWORD=${DB_PASSWORD:-xuanjian123}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    networks:
+      - xuanjian-net
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    ports:
+      - "5000:5000"
+    environment:
+      - AI_SERVICE_PORT=5000
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_API_BASE=${LLM_API_BASE:-https://api.openai.com/v1}
+      - LLM_MODEL=${LLM_MODEL:-gpt-4}
+    volumes:
+      - ai-models:/app/models
+    restart: unless-stopped
+    networks:
+      - xuanjian-net
+
+volumes:
+  server-data:
+  server-logs:
+  server-uploads:
+  ai-models:
+  mysql-data:
+
+networks:
+  xuanjian-net:
+    driver: bridge

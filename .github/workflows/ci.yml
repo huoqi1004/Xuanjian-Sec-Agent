@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  server-test:
+    name: 后端测试（Jest）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: 安装依赖
+        run: npm ci
+      - name: 单元 + 集成测试
+        run: npm test -- --runInBand --forceExit
+
+  # N-06 数据层双跑：同一套业务断言在 SQLite 与 MySQL 下执行
+  db-adapter-test:
+    name: 数据库驱动适配测试（SQLite + MySQL 双跑）
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root123456
+          MYSQL_DATABASE: xuanjian
+          MYSQL_USER: xuanjian
+          MYSQL_PASSWORD: xuanjian123
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot123456"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: 安装依赖
+        run: npm ci
+      - name: 生成 Schema
+        run: node ../scripts/n06/generate-schema.js
+      - name: SQLite 适配测试
+        run: npx jest test/db-adapters.test.js --forceExit
+      - name: MySQL 适配测试
+        env:
+          DB_DRIVER: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: root123456
+          DB_NAME: xuanjian
+        run: npx jest test/db-adapters.test.js --forceExit
+
+  ai-service-test:
+    name: AI 服务契约测试（Pytest）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: 安装依赖（契约测试所需最小集）
+        run: pip install numpy scikit-learn joblib pytest
+      - name: 运行契约测试
+        run: python -m pytest test_contract.py -v
+
+  frontend-build:
+    name: 前端构建（类型检查 + 打包）
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend-app/package-lock.json
+      - name: 安装依赖
+        run: npm ci
+      - name: 类型检查
+        run: npm run type-check
+      - name: 代码质量门禁（ESLint + Prettier）
+        run: |
+          npm run lint
+          npm run format:check
+      - name: 构建产物
+        run: npm run build

@@ -1,0 +1,8 @@
+# 构建产物与依赖
+dist/
+node_modules/
+
+# 配置文件不参与格式化
+*.config.ts
+.prettierrc.json
+eslint.config.js
