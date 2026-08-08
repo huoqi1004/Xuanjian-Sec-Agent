@@ -1,5 +1,7 @@
 const { createContext } = require('../agents/baseAgent');
 const { registerAgent, getAgent, listAgents } = require('../agents/registry');
+const { registerAgents } = require('../agents/agents');
+const { registerBuiltinTools } = require('../agents/tools');
 
 describe('Agent 框架 - 基类', () => {
   test('createContext 提供任务/用户/元数据与 set/get', () => {
@@ -35,4 +37,37 @@ describe('Agent 框架 - 注册中心', () => {
   test('重复注册抛错', () => {
     expect(() => registerAgent(HelloAgent)).toThrow(/已注册/);
   });
+});
+
+beforeAll(() => {
+  registerAgents();
+  registerBuiltinTools({ force: true });
+});
+
+test('PlannerAgent 规则回退计划按任务分类', async () => {
+  const ctx = createContext('分析内网资产风险', { userId: 1 });
+  const r = await getAgent('planner').execute(ctx);
+  expect(r.success).toBe(true);
+  expect(r.data.steps[0].tool).toBe('start_scan');
+  expect(ctx.get('plan')).toBeTruthy();
+});
+
+test('ExecutorAgent 顺序执行工具并合并 task_id', async () => {
+  const ctx = createContext('扫描并查询结果');
+  ctx.set('plan', { goal: '扫描', steps: [
+    { tool: 'start_scan', params: { target_cidr: '127.0.0.1', port_range: '3000-3000' }, reason: 'x' },
+    { tool: 'get_scan_results', params: {}, reason: 'y' }
+  ]});
+  const r = await getAgent('executor').execute(ctx);
+  expect(r.success).toBe(true);
+  expect(r.data.results).toHaveLength(2);
+  expect(ctx.get('task_id')).toBeTruthy();
+}, 20000);
+
+test('DefenseAgent 高危工具生成人工确认请求', async () => {
+  const ctx = createContext('封禁IP');
+  ctx.set('plan', { steps: [{ tool: 'block_ip', params: { ip: '1.2.3.4' }, reason: 'x' }] });
+  const r = await getAgent('defense').execute(ctx);
+  expect(r.success).toBe(true);
+  expect(r.data.confirmation_required).toBe(true);
 });
