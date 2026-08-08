@@ -2,6 +2,7 @@ const { createContext } = require('../agents/baseAgent');
 const { registerAgent, getAgent, listAgents } = require('../agents/registry');
 const { registerAgents } = require('../agents/agents');
 const { registerBuiltinTools } = require('../agents/tools');
+const { runOrchestratedAgent } = require('../agents/orchestrator');
 
 describe('Agent 框架 - 基类', () => {
   test('createContext 提供任务/用户/元数据与 set/get', () => {
@@ -70,4 +71,21 @@ test('DefenseAgent 高危工具生成人工确认请求', async () => {
   const r = await getAgent('defense').execute(ctx);
   expect(r.success).toBe(true);
   expect(r.data.confirmation_required).toBe(true);
+});
+
+test('Orchestrator 端到端：规划→执行→总结', async () => {
+  const result = await runOrchestratedAgent('分析内网资产风险', { userId: 1, plan: null });
+  expect(result.success).toBe(true);
+  expect(result.plan).toBeTruthy();
+  expect(Array.isArray(result.results)).toBe(true);
+  expect(result.summary).toBeTruthy();
+}, 30000);
+
+test('Orchestrator 注入计划时跳过 LLM 规划', async () => {
+  const result = await runOrchestratedAgent('扫描', {
+    userId: 1,
+    plan: { goal: 'x', steps: [{ tool: 'get_alert_summary', params: { limit: 3 }, reason: 'r' }] }
+  });
+  expect(result.success).toBe(true);
+  expect(result.results[0].tool).toBe('get_alert_summary');
 });

@@ -1,4 +1,4 @@
-/** 注册全部业务 Agent */
+/** 注册全部业务 Agent（幂等：重复调用直接跳过） */
 const { registerAgent } = require('../registry');
 const PlannerAgent = require('./plannerAgent');
 const ExecutorAgent = require('./executorAgent');
@@ -8,7 +8,9 @@ const ReporterAgent = require('./reporterAgent');
 const ScanAgent = require('./scanAgent');
 const { DefenseAgent } = require('./defenseAgent');
 
+let registered = false;
 function registerAgents() {
+  if (registered) return;
   registerAgent(PlannerAgent);
   registerAgent(ExecutorAgent);
   registerAgent(AnalystAgent);
@@ -16,5 +18,6 @@ function registerAgents() {
   registerAgent(ReporterAgent);
   registerAgent(ScanAgent);
   registerAgent(DefenseAgent);
+  registered = true;
 }
 module.exports = { registerAgents };

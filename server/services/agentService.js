@@ -116,32 +116,18 @@ function _createConfirmation(step, taskId) {
 }
 
 /**
- * 人工确认审批
+ * 人工确认审批（转调编排器）
  * @param {string} confirmationId
  * @param {'approve'|'reject'} decision
  */
 async function confirmExecution(confirmationId, decision) {
-  const record = pendingConfirmations.get(confirmationId);
-  if (!record) return { success: false, error: '确认请求不存在或已过期' };
-  if (record.status !== 'pending') return { success: false, error: '该请求已处理' };
-
-  if (decision !== 'approve') {
-    record.status = 'rejected';
-    record.reviewedAt = new Date().toISOString();
-    logger.warn(`[Agent] 人工拒绝高危动作 ${record.tool}: ${JSON.stringify(record.params)}`);
-    return { success: true, data: { confirmation_id: confirmationId, status: 'rejected', message: '已拒绝执行' } };
-  }
-
-  record.status = 'approved';
-  record.reviewedAt = new Date().toISOString();
-  const result = await aiService.executeTool(record.tool, record.params);
-  metrics.inc('agent_high_risk_executions_total', { tool: record.tool, decision: 'approved' }, 1, '高危动作执行数');
-  logger.info(`[Agent] 人工确认后执行高危动作 ${record.tool}（${confirmationId}）`);
-  return { success: true, data: { confirmation_id: confirmationId, status: 'approved', result } };
+  const { confirmExecution: orchestratedConfirm } = require('../agents/orchestrator');
+  return orchestratedConfirm(confirmationId, decision);
 }
 
 function getPendingConfirmations() {
-  return [...pendingConfirmations.values()].filter((r) => r.status === 'pending');
+  const { getPendingConfirmations: getOrchestrated } = require('../agents/orchestrator');
+  return getOrchestrated();
 }
 
 /**
@@ -172,68 +158,8 @@ async function executeStep(step, context) {
  * @param {object} opts { userId, plan? }
  */
 async function runAgent(task, opts = {}) {
-  const start = Date.now();
-  metrics.inc('agent_runs_total', {}, 1, 'Agent 执行次数');
-
-  // 1. 规划（支持调用方注入确定计划，便于测试与高级编排）
-  let plan;
-  if (opts.plan) {
-    plan = _normalizePlan(opts.plan);
-  } else {
-    try {
-      plan = await planWithLLM(task);
-      metrics.inc('agent_plans_total', { source: 'llm' }, 1, 'Agent 计划来源');
-    } catch (err) {
-      logger.warn(`[Agent] LLM 规划失败，规则回退: ${err.message}`);
-      plan = buildFallbackPlan(task);
-      metrics.inc('agent_plans_total', { source: 'fallback' }, 1, 'Agent 计划来源');
-    }
-  }
-
-  if (!plan.steps.length) {
-    return { success: false, error: '无法为任务生成可执行计划', plan };
-  }
-
-  // 2. 逐步执行
-  const taskId = `agent_${Date.now().toString(36)}`;
-  const context = { userId: opts.userId };
-  const results = [];
-
-  for (const step of plan.steps) {
-    if (Date.now() - start > MAX_EXECUTION_MS) {
-      results.push({ tool: step.tool, success: false, error: 'Agent 执行超时，已中止' });
-      break;
-    }
-    if (_isHighRisk(step.tool)) {
-      const confirmation = _createConfirmation(step, taskId);
-      results.push({
-        tool: step.tool,
-        success: false,
-        require_confirmation: true,
-        confirmation_id: confirmation.id,
-        reason: step.reason,
-        message: '高危动作需要人工确认'
-      });
-      // 高危动作暂停后续步骤，等待人工确认
-      break;
-    }
-    const result = await executeStep(step, context);
-    results.push({ tool: step.tool, params: step.params, reason: step.reason, ...result });
-  }
-
-  // 3. 总结（LLM 汇总中间结果，失败时模板汇总）
-  const summary = await summarize(task, plan.goal, results);
-  metrics.observe('agent_execution_duration', {}, (Date.now() - start) / 1000, 'Agent 执行耗时', { unit: 'seconds' });
-
-  return {
-    success: true,
-    task_id: taskId,
-    plan,
-    results,
-    summary,
-    confirmation_required: results.some((r) => r.require_confirmation),
-    duration_ms: Date.now() - start
-  };
+  const { runOrchestratedAgent } = require('../agents/orchestrator');
+  return runOrchestratedAgent(task, opts);
 }
 
 /**
@@ -277,6 +203,7 @@ module.exports = {
   getPendingConfirmations,
   buildFallbackPlan,
   planWithLLM,
+  _normalizePlan,
   AGENT_TOOL_CATALOG,
   HIGH_RISK_TOOLS
 };
