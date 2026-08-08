@@ -2,6 +2,7 @@ const { createContext } = require('../agents/baseAgent');
 const { registerAgent, getAgent, listAgents } = require('../agents/registry');
 const { registerAgents } = require('../agents/agents');
 const { registerBuiltinTools } = require('../agents/tools');
+const { listTools } = require('../agents/tools/registry');
 const { runOrchestratedAgent } = require('../agents/orchestrator');
 
 describe('Agent 框架 - 基类', () => {
@@ -88,4 +89,14 @@ test('Orchestrator 注入计划时跳过 LLM 规划', async () => {
   });
   expect(result.success).toBe(true);
   expect(result.results[0].tool).toBe('get_alert_summary');
+});
+
+describe('工具目录完整性（B2）', () => {
+  test('AGENT_TOOL_CATALOG 全部工具已注册到工具表', () => {
+    const { AGENT_TOOL_CATALOG } = require('../services/agentService');
+    const names = listTools().map((t) => t.name);
+    for (const t of AGENT_TOOL_CATALOG) {
+      expect(names).toContain(t.name);
+    }
+  });
 });
