@@ -1090,12 +1090,12 @@ module.exports = { DefenseAgent, confirmExecution, getPendingConfirmations, HIGH
 ```js
 /** 注册全部业务 Agent */
 const { registerAgent } = require('../registry');
-const { PlannerAgent } = require('./plannerAgent');
-const { ExecutorAgent } = require('./executorAgent');
-const { AnalystAgent } = require('./analystAgent');
-const { IntelAgent } = require('./intelAgent');
-const { ReporterAgent } = require('./reporterAgent');
-const { ScanAgent } = require('./scanAgent');
+const PlannerAgent = require('./plannerAgent');
+const ExecutorAgent = require('./executorAgent');
+const AnalystAgent = require('./analystAgent');
+const IntelAgent = require('./intelAgent');
+const ReporterAgent = require('./reporterAgent');
+const ScanAgent = require('./scanAgent');
 const { DefenseAgent } = require('./defenseAgent');
 
 function registerAgents() {
@@ -1109,6 +1109,8 @@ function registerAgents() {
 }
 module.exports = { registerAgents };
 ```
+
+> 注：planner/executor/analyst/intel/reporter/scan 各文件为默认导出（`module.exports = PlannerAgent`），index.js 使用默认导入；defenseAgent 为命名导出（`module.exports = { DefenseAgent, ... }`），使用解构导入。
 
 **Step 4 — 运行确认通过**：`npx jest test/agent-framework.test.js` → PASS。
 
@@ -1218,8 +1220,11 @@ async function runOrchestratedAgent(task, opts = {}) {
   }
   if (!plan || !plan.steps.length) return { success: false, error: '无法为任务生成可执行计划', plan };
 
-  // 2. 执行：ExecutorAgent 逐步执行工具
+  // 2. 执行：ExecutorAgent 仅执行非高危步骤（高危步骤留待 defense 人工确认）
+  const { HIGH_RISK_TOOLS } = require('./agents/defenseAgent');
+  const safeSteps = plan.steps.filter((s) => !HIGH_RISK_TOOLS.has(s.tool));
   const executor = getAgent('executor');
+  ctx.set('plan', { ...plan, steps: safeSteps });
   const execResult = await executor.execute(ctx);
   const results = (ctx.get('results') || []).map((r) => ({
     tool: r.tool, params: r.params, reason: r.reason, ...r
@@ -1236,7 +1241,8 @@ async function runOrchestratedAgent(task, opts = {}) {
     }
   }
 
-  // 4. 高危动作：DefenseAgent 生成人工确认（来自计划中的高危工具）
+  // 4. 高危动作：DefenseAgent 基于完整计划生成人工确认（暂停后续步骤，等待人工确认）
+  ctx.set('plan', plan);
   const defense = getAgent('defense');
   const defenseResult = await defense.execute(ctx);
   const confirmations = (ctx.get('confirmations') || []).filter((c) => c.require_confirmation);
@@ -1263,6 +1269,11 @@ async function runOrchestratedAgent(task, opts = {}) {
 
 module.exports = { runOrchestratedAgent, getPendingConfirmations, confirmExecution };
 ```
+
+> 实现要点（A6 实测修正）：
+> 1. `agents/agents/index.js` 的 `registerAgents()` 增加 `registered` 幂等标志（与 tools/index.js 一致），避免 orchestrator 顶层注册与测试 beforeAll 重复注册冲突。
+> 2. `agentService.js` 原 `module.exports` **不含 `_normalizePlan`**，需补加导出（orchestrator 注入计划路径依赖）。
+> 3. **高危语义回归修复**：ExecutorAgent 会无条件执行计划中全部工具，绕过人工确认直接执行 `block_ip`/`account_lock`（导致原 agentService 高危用例失败）。orchestrator 步骤 2 仅对"过滤高危后的 safeSteps"执行，步骤 4 恢复完整 plan 交给 defense 生成确认，对齐原 `runAgent`"高危即暂停等待确认"语义。
 
 **Step 4 — 改造 `agentService.js` 为兼容壳**：保留全部导出签名，`runAgent`/`confirmExecution`/`getPendingConfirmations` 转调编排器；`planWithLLM`/`buildFallbackPlan`/`_normalizePlan`/`AGENT_TOOL_CATALOG`/`HIGH_RISK_TOOLS` 保留供编排器与外部引用。
 
