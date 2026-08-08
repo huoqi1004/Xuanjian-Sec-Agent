@@ -1,6 +1,7 @@
 const request = require('supertest');
 const { startServer } = require('../server');
 const { resetForTest, closeDb } = require('../db/database');
+const aiService = require('../services/aiService');
 
 describe('API 集成冒烟测试', () => {
   let app;
@@ -98,5 +99,45 @@ describe('API 集成冒烟测试', () => {
   test('未知接口返回 404', async () => {
     const res = await request(app).get('/api/not-exist');
     expect(res.status).toBe(404);
+  });
+
+  test('GET /api/ai/agent/tools 返回工具目录', async () => {
+    // /api/ai/* 受 authMiddleware 保护，先登录获取 token
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ username: 'admin', password: 'admin123' });
+    const token = login.body.data.token;
+
+    const res = await request(app)
+      .get('/api/ai/agent/tools')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe(0);
+    expect(res.body.data).toBeInstanceOf(Array);
+    const names = res.body.data.map((t) => t.name);
+    expect(names).toContain('block_ip');
+    expect(names).toContain('get_threat_intel');
+  });
+
+  test('GET /api/ai/agent/plan 返回计划预览（不入库不执行）', async () => {
+    // 测试环境无外网：mock LLM 调用失败，路由应回退 buildFallbackPlan 并返回 code:0
+    const spy = jest.spyOn(aiService, 'callDeepSeek').mockResolvedValue({ success: false, error: 'test: llm unavailable' });
+    try {
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'admin', password: 'admin123' });
+      const token = login.body.data.token;
+
+      const res = await request(app)
+        .get('/api/ai/agent/plan')
+        .query({ task: '排查内网风险资产' })
+        .set('Authorization', `Bearer ${token}`);
+      expect(res.status).toBe(200);
+      expect(res.body.code).toBe(0);
+      expect(res.body.data).toBeTruthy();
+      expect(Array.isArray(res.body.data.steps)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

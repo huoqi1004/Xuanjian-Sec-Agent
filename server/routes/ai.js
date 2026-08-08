@@ -298,6 +298,37 @@ router.get('/agent/pending', async (req, res) => {
   }
 });
 
+/* ---------------- 多 Agent 工作台数据（N-25） ---------------- */
+
+router.get('/agent/tools', async (req, res) => {
+  try {
+    const { listTools } = require('../agents/tools/registry');
+    const { registerBuiltinTools } = require('../agents/tools');
+    registerBuiltinTools();
+    res.json({ code: 0, message: '获取成功', data: listTools() });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: '获取工具目录失败' });
+  }
+});
+
+router.get('/agent/plan', async (req, res) => {
+  try {
+    // 计划解析预览：不入库、不执行，供前端先渲染步骤
+    const { task } = req.query;
+    if (!task) return res.status(400).json({ code: -1, message: '缺少 task 参数' });
+    const agentService = require('../services/agentService');
+    let plan;
+    try {
+      plan = await agentService.planWithLLM(String(task));
+    } catch (err) {
+      plan = agentService.buildFallbackPlan(String(task));
+    }
+    res.json({ code: 0, message: '计划生成成功', data: plan });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: '计划生成失败' });
+  }
+});
+
 /* ---------------- 安全运营 Copilot（4.15） ---------------- */
 
 router.post('/copilot/triage', async (req, res) => {
