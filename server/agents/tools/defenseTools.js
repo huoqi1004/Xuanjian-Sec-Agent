@@ -16,6 +16,8 @@ function registerDefenseTools() {
         .run(null, 'block_ip', `人工确认后封禁 IP ${ip}，时长 ${duration}s`, 'success');
       db.prepare('INSERT INTO alert_records (related_asset, alert_type, severity, confidence, description, status) VALUES (?, ?, ?, ?, ?, ?)')
         .run(ip, 'manual_block', 'high', 1.0, `人工确认封禁恶意 IP ${ip}（时长 ${duration}s）`, 'new');
+      db.prepare('INSERT INTO audit_logs (user_id, username, operation_type, operation_target, operation_detail, result) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(params.userId || null, params.username || 'agent', 'defense_action', `ip:${ip}`, `block_ip ${ip} duration=${duration}s`, 'success');
       return { data: { ip, duration, action: 'blocked' }, message: `已封禁 IP ${ip}` };
     }
   });
@@ -33,6 +35,8 @@ function registerDefenseTools() {
         .run(null, 'account_lock', `人工确认后锁定账号 ${username}`, 'success');
       db.prepare('INSERT INTO alert_records (related_asset, alert_type, severity, confidence, description, status) VALUES (?, ?, ?, ?, ?, ?)')
         .run(username, 'account_locked', 'high', 1.0, `人工确认锁定被入侵账号 ${username}`, 'new');
+      db.prepare('INSERT INTO audit_logs (user_id, username, operation_type, operation_target, operation_detail, result) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(params.userId || null, params.username || 'agent', 'defense_action', `user:${username}`, `account_lock ${username}`, 'success');
       return { data: { username, action: 'locked' }, message: `已锁定账号 ${username}` };
     }
   });

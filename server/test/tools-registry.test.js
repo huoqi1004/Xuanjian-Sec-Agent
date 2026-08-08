@@ -1,4 +1,4 @@
-const { registerTool, executeToolByName, listTools, resetTools } = require('../agents/tools/registry');
+const { registerTool, executeToolByName, listTools, resetTools, getAuditLogs } = require('../agents/tools/registry');
 const { registerBuiltinTools } = require('../agents/tools');
 
 describe('工具注册表', () => {
@@ -53,5 +53,27 @@ describe('内置工具注册', () => {
     const r = await executeToolByName('get_alert_summary', { limit: 3 });
     expect(r.success).toBe(true);
     expect(Array.isArray(r.data)).toBe(true);
+  });
+});
+
+describe('高危工具审计增强（B1）', () => {
+  beforeAll(() => { resetTools(); registerBuiltinTools({ force: true }); });
+
+  test('block_ip 执行后产生审计记录', async () => {
+    const r = await executeToolByName('block_ip', { ip: '10.0.0.1' });
+    expect(r.success).toBe(true);
+    const logs = getAuditLogs();
+    expect(logs.some((l) => l.tool === 'block_ip' && l.success)).toBe(true);
+  });
+
+  test('高危工具元数据含 risk=high', () => {
+    const tool = listTools().find((t) => t.name === 'block_ip');
+    expect(tool.risk).toBe('high');
+  });
+
+  test('block_ip 写入 audit_logs 表（双落库）', () => {
+    const db = require('../db/database').getDb();
+    const rows = db.all("SELECT * FROM audit_logs WHERE operation_type = 'defense_action' ORDER BY id DESC");
+    expect(rows.some((row) => row.operation_target && row.operation_target.includes('10.0.0.1'))).toBe(true);
   });
 });
