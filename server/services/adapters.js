@@ -14,6 +14,7 @@
 const { getDb } = require('../db/database');
 const notifyService = require('./notifyService');
 const logger = require('../utils/logger');
+const switchAcl = require('./adapters/switchAcl');
 
 const adapters = {
   firewall_block: async (params) => {
@@ -63,7 +64,10 @@ const adapters = {
   log_only: async (params) => {
     logger.info(`[SOAR] 记录: ${params.message || '无内容'}`);
     return { success: true, detail: params.message || '已记录' };
-  }
+  },
+
+  switch_acl_block: async (params) => switchAcl.switchAclBlock(params),
+  switch_acl_unblock: async (params) => switchAcl.switchAclUnblock(params)
 };
 
 /**
