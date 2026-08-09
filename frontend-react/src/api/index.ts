@@ -103,11 +103,91 @@ export const reportsApi = {
     }>({ method: 'GET', url: '/reports/overview' })
 };
 
+// ============ 网络扫描 ============
+export interface ScanTask {
+  id: string;
+  target_cidr: string;
+  scan_mode?: string;
+  port_range?: string;
+  status: string;
+  progress?: number;
+  created_at?: string;
+  completed_at?: string;
+}
+
+export interface ScanResult {
+  task_id: string;
+  ip: string;
+  port: number;
+  service?: string;
+  version?: string;
+  banner?: string;
+  state?: string;
+}
+
+export const scanApi = {
+  tasks: (params?: { page?: number; pageSize?: number; status?: string }) =>
+    requestData<{ list: ScanTask[]; total: number; page: number; pageSize: number }>({
+      method: 'GET',
+      url: '/scan/tasks',
+      params
+    }),
+  start: (data: { target_cidr: string; scan_mode?: string; port_range?: string }) =>
+    requestData<{ task_id: string; target_cidr?: string; scan_mode?: string; port_range?: string; status?: string }>({
+      method: 'POST',
+      url: '/scan/start',
+      data
+    }),
+  detail: (taskId: string) =>
+    requestData<
+      ScanTask & {
+        results: ScanResult[];
+        stats?: { total_hosts?: number; open_ports?: number; services?: Record<string, number> };
+      }
+    >({ method: 'GET', url: `/scan/tasks/${taskId}` }),
+  remove: (taskId: string) => requestData<null>({ method: 'DELETE', url: `/scan/tasks/${taskId}` })
+};
+
+// ============ 基线排查 ============
+export interface BaselinePolicy {
+  id: number;
+  name: string;
+  description?: string;
+  standard?: string;
+  checks?: Array<Record<string, unknown>>;
+}
+
+export interface BaselineCheckResult {
+  task_id?: string;
+  host_id?: string;
+  check_id?: string;
+  check_name: string;
+  expected_value?: string;
+  actual_value?: string;
+  status?: string;
+  severity?: string;
+  remediation?: string;
+}
+
+export interface BaselineResultsData {
+  results: BaselineCheckResult[];
+  stats?: { total?: number; pass?: number; fail?: number; warn?: number; compliance_rate?: number | string };
+  bySeverity?: Record<string, BaselineCheckResult[]>;
+}
+
+export const baselineApi = {
+  policies: () => requestData<BaselinePolicy[]>({ method: 'GET', url: '/baseline/policies' }),
+  check: (policy_id: number, host = 'localhost') =>
+    requestData<{ task_id: string; policy_id: number; policy_name?: string; host_id?: string; check_count?: number; status?: string }>({
+      method: 'POST',
+      url: '/baseline/check',
+      data: { policy_id, host }
+    }),
+  results: (taskId: string) =>
+    requestData<BaselineResultsData>({ method: 'GET', url: `/baseline/results/${taskId}` })
+};
+
 // 以下模块桩：C5-C10 逐个填充
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const scanApi = {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const baselineApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const virusApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
