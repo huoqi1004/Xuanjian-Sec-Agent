@@ -2,7 +2,11 @@ import http, { requestData } from './http';
 
 export const authApi = {
   login: (username: string, password: string) =>
-    requestData<{ token: string; user?: unknown }>({ method: 'POST', url: '/auth/login', data: { username, password } }),
+    requestData<{ token: string; user?: unknown }>({
+      method: 'POST',
+      url: '/auth/login',
+      data: { username, password }
+    }),
   profile: () => requestData<unknown>({ method: 'GET', url: '/auth/profile' }),
   register: (data: { username: string; password: string; role_id?: number; department?: string }) =>
     requestData<unknown>({ method: 'POST', url: '/auth/register', data }),
@@ -54,11 +58,30 @@ export interface DashboardData {
     medium_count?: number;
     low_count?: number;
   };
-  threat_intel?: { total?: number; ip_count?: number; domain_count?: number; hash_count?: number; cve_count?: number; avg_confidence?: number };
-  scans?: { total_tasks?: number; running_tasks?: number; completed_tasks?: number; failed_tasks?: number; open_ports?: number };
+  threat_intel?: {
+    total?: number;
+    ip_count?: number;
+    domain_count?: number;
+    hash_count?: number;
+    cve_count?: number;
+    avg_confidence?: number;
+  };
+  scans?: {
+    total_tasks?: number;
+    running_tasks?: number;
+    completed_tasks?: number;
+    failed_tasks?: number;
+    open_ports?: number;
+  };
   defense?: { total_policies?: number; enabled_policies?: number; unattended_policies?: number };
   devices?: { total_devices?: number; online_devices?: number; offline_devices?: number };
-  virus_detection?: { total_scans?: number; malicious_count?: number; suspicious_count?: number; poisoned_count?: number; clean_count?: number };
+  virus_detection?: {
+    total_scans?: number;
+    malicious_count?: number;
+    suspicious_count?: number;
+    poisoned_count?: number;
+    clean_count?: number;
+  };
   baseline?: { compliance_rate?: number };
   risk_distribution?: Array<{ name: string; value: number }>;
   threat_trend?: Array<{ date: string; count: number }>;
@@ -127,8 +150,7 @@ export const reportsApi = {
   generateDocx: (reportId: number) =>
     requestData<ReportGenerateResult>({ method: 'POST', url: `/reports/${reportId}/generate-docx` }),
   /** 批量导出 CSV（type: alerts|scan|baseline|reports，带 BOM 中文表头） */
-  exportCsv: (type: string) =>
-    http.get<Blob>('/reports/export/csv', { params: { type }, responseType: 'blob' })
+  exportCsv: (type: string) => http.get<Blob>('/reports/export/csv', { params: { type }, responseType: 'blob' })
 };
 
 // ============ 网络扫描 ============
@@ -206,13 +228,19 @@ export interface BaselineResultsData {
 export const baselineApi = {
   policies: () => requestData<BaselinePolicy[]>({ method: 'GET', url: '/baseline/policies' }),
   check: (policy_id: number, host = 'localhost') =>
-    requestData<{ task_id: string; policy_id: number; policy_name?: string; host_id?: string; check_count?: number; status?: string }>({
+    requestData<{
+      task_id: string;
+      policy_id: number;
+      policy_name?: string;
+      host_id?: string;
+      check_count?: number;
+      status?: string;
+    }>({
       method: 'POST',
       url: '/baseline/check',
       data: { policy_id, host }
     }),
-  results: (taskId: string) =>
-    requestData<BaselineResultsData>({ method: 'GET', url: `/baseline/results/${taskId}` })
+  results: (taskId: string) => requestData<BaselineResultsData>({ method: 'GET', url: `/baseline/results/${taskId}` })
 };
 
 // ============ 病毒查杀 ============
@@ -305,8 +333,7 @@ export const virusApi = {
       params: { page, pageSize }
     }),
   /** 扫描报告详情 */
-  report: (scanId: string) =>
-    requestData<VirusScanReport>({ method: 'GET', url: `/virus/report/${scanId}` }),
+  report: (scanId: string) => requestData<VirusScanReport>({ method: 'GET', url: `/virus/report/${scanId}` }),
   /** 病毒哈希列表（分页/搜索） */
   hashList: (params: { page?: number; pageSize?: number; search?: string }) =>
     requestData<{ list: VirusHash[]; total: number; page: number; pageSize: number }>({
@@ -430,8 +457,7 @@ export const djppApi = {
   checks: (categoryId: number) =>
     requestData<DjppCheck[]>({ method: 'GET', url: `/djpp/categories/${categoryId}/checks` }),
   /** 指定等级的全部检查项 */
-  levelChecks: (level: number) =>
-    requestData<DjppCheck[]>({ method: 'GET', url: `/djpp/levels/${level}/checks` }),
+  levelChecks: (level: number) => requestData<DjppCheck[]>({ method: 'GET', url: `/djpp/levels/${level}/checks` }),
   /** 测评任务列表 */
   tasks: (params?: { page?: number; pageSize?: number }) =>
     requestData<{ tasks: DjppTask[]; total: number; page: number; pageSize: number }>({
@@ -443,8 +469,7 @@ export const djppApi = {
   create: (data: { level: number; name: string; description?: string }) =>
     requestData<{ taskId: string; status: string }>({ method: 'POST', url: '/djpp/tasks', data }),
   /** 任务详情（含检查项结果与统计） */
-  detail: (taskId: string) =>
-    requestData<DjppTaskDetail>({ method: 'GET', url: `/djpp/tasks/${taskId}` }),
+  detail: (taskId: string) => requestData<DjppTaskDetail>({ method: 'GET', url: `/djpp/tasks/${taskId}` }),
   /** 生成 AI 测评报告（耗时较长） */
   report: (taskId: string) =>
     requestData<DjppReportData>({ method: 'POST', url: `/djpp/tasks/${taskId}/report`, timeout: 120000 }),
@@ -456,8 +481,7 @@ export const djppApi = {
       params
     }),
   /** 删除等保报告 */
-  deleteReport: (reportId: string) =>
-    requestData<null>({ method: 'DELETE', url: `/djpp/reports/${reportId}` }),
+  deleteReport: (reportId: string) => requestData<null>({ method: 'DELETE', url: `/djpp/reports/${reportId}` }),
   /** 生成并下载 DOCX 报告（通用报告服务） */
   generateDocx: (reportId: string) =>
     requestData<{ docxPath?: string; downloadUrl?: string }>({
@@ -638,8 +662,7 @@ export const deviceApi = {
   commands: (deviceId: string, params?: { page?: number; pageSize?: number }) =>
     requestData<PageResult<DeviceCommand>>({ method: 'GET', url: `/device/${deviceId}/commands`, params }),
   /** 注销设备（管理员） */
-  unregister: (deviceId: string) =>
-    requestData<null>({ method: 'POST', url: `/device/${deviceId}/unregister` })
+  unregister: (deviceId: string) => requestData<null>({ method: 'POST', url: `/device/${deviceId}/unregister` })
 };
 
 // ============ 用户管理 ============

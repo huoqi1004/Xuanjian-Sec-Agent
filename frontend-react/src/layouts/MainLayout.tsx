@@ -34,8 +34,7 @@ export default function MainLayout() {
     };
   }, [connect]);
 
-  const currentTitle =
-    menuItems.find((item) => item.path === location.pathname)?.title || '玄鉴安全智能体';
+  const currentTitle = menuItems.find((item) => item.path === location.pathname)?.title || '玄鉴安全智能体';
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-100">

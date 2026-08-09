@@ -301,7 +301,11 @@ export default function Situational() {
     const data =
       total > 0
         ? (Object.entries(counts) as Array<[string, number]>)
-            .map(([lv, n]) => ({ value: n, name: getLevelTag(lv).label, itemStyle: { color: colorMap[getLevelTag(lv).label] || '#909399' } }))
+            .map(([lv, n]) => ({
+              value: n,
+              name: getLevelTag(lv).label,
+              itemStyle: { color: colorMap[getLevelTag(lv).label] || '#909399' }
+            }))
             .filter((d) => d.value > 0)
         : [
             { value: 8, name: '严重', itemStyle: { color: '#f56c6c' } },
@@ -340,7 +344,13 @@ export default function Situational() {
         borderColor: 'rgba(0,212,255,0.2)',
         textStyle: { color: '#c0c0c0' }
       },
-      legend: { data: ['新增告警', '已处理'], top: '5%', textStyle: { color: '#c0c0c0' }, itemWidth: 16, itemHeight: 3 },
+      legend: {
+        data: ['新增告警', '已处理'],
+        top: '5%',
+        textStyle: { color: '#c0c0c0' },
+        itemWidth: 16,
+        itemHeight: 3
+      },
       grid: { left: '3%', right: '4%', bottom: '3%', top: '18%', containLabel: true },
       xAxis: {
         type: 'category' as const,
@@ -363,10 +373,17 @@ export default function Situational() {
           lineStyle: { color: '#f56c6c', width: 2 },
           itemStyle: { color: '#f56c6c' },
           areaStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-              { offset: 0, color: 'rgba(245,108,108,0.15)' },
-              { offset: 1, color: 'rgba(245,108,108,0)' }
-            ] }
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(245,108,108,0.15)' },
+                { offset: 1, color: 'rgba(245,108,108,0)' }
+              ]
+            }
           }
         },
         {
@@ -377,10 +394,17 @@ export default function Situational() {
           lineStyle: { color: '#67c23a', width: 2 },
           itemStyle: { color: '#67c23a' },
           areaStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-              { offset: 0, color: 'rgba(103,194,58,0.15)' },
-              { offset: 1, color: 'rgba(103,194,58,0)' }
-            ] }
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(103,194,58,0.15)' },
+                { offset: 1, color: 'rgba(103,194,58,0)' }
+              ]
+            }
           }
         }
       ]
@@ -420,10 +444,17 @@ export default function Situational() {
           lineStyle: { color: '#00d4ff', width: 3 },
           itemStyle: { color: '#00d4ff' },
           areaStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-              { offset: 0, color: 'rgba(0,212,255,0.2)' },
-              { offset: 1, color: 'rgba(0,212,255,0)' }
-            ] }
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(0,212,255,0.2)' },
+                { offset: 1, color: 'rgba(0,212,255,0)' }
+              ]
+            }
           },
           markLine: {
             data: [
@@ -464,7 +495,8 @@ export default function Situational() {
       category: info.maxLevel,
       label: { show: true, fontSize: 11, color: '#e0e0e0' },
       itemStyle: {
-        color: info.maxLevel >= 4 ? '#f56c6c' : info.maxLevel >= 3 ? '#e6a23c' : info.maxLevel >= 2 ? '#409eff' : '#67c23a'
+        color:
+          info.maxLevel >= 4 ? '#f56c6c' : info.maxLevel >= 3 ? '#e6a23c' : info.maxLevel >= 2 ? '#409eff' : '#67c23a'
       }
     }));
     if (nodes.length === 0) {
@@ -518,12 +550,20 @@ export default function Situational() {
           <p className="mt-1 text-sm text-gray-400">全局安全态势监控与威胁情报管理</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => generateReport('周报')}>生成周报</Button>
-          <Button size="sm" onClick={() => generateReport('月报')}>生成月报</Button>
+          <Button size="sm" variant="outline" onClick={() => generateReport('周报')}>
+            生成周报
+          </Button>
+          <Button size="sm" onClick={() => generateReport('月报')}>
+            生成月报
+          </Button>
         </div>
       </div>
 
-      {loading && <div className="rounded-lg border border-cyan-500/20 bg-[#16213e]/60 px-4 py-3 text-sm text-cyan-300/70">加载中…</div>}
+      {loading && (
+        <div className="rounded-lg border border-cyan-500/20 bg-[#16213e]/60 px-4 py-3 text-sm text-cyan-300/70">
+          加载中…
+        </div>
+      )}
 
       {/* 三个统计图表 */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -554,7 +594,9 @@ export default function Situational() {
             type="button"
             onClick={() => setActiveTab('alerts')}
             className={`border-b-2 px-1 pb-2 text-sm transition-colors ${
-              activeTab === 'alerts' ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-gray-400 hover:text-gray-200'
+              activeTab === 'alerts'
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
             告警列表
@@ -563,7 +605,9 @@ export default function Situational() {
             type="button"
             onClick={() => setActiveTab('intel')}
             className={`border-b-2 px-1 pb-2 text-sm transition-colors ${
-              activeTab === 'intel' ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-gray-400 hover:text-gray-200'
+              activeTab === 'intel'
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
             威胁情报
@@ -587,7 +631,9 @@ export default function Situational() {
                 <option value="resolved">已解决</option>
                 <option value="false_positive">误报</option>
               </select>
-              <Button size="sm" variant="outline" onClick={exportAlerts}>导出CSV</Button>
+              <Button size="sm" variant="outline" onClick={exportAlerts}>
+                导出CSV
+              </Button>
             </div>
             <Table>
               <thead>
@@ -648,7 +694,9 @@ export default function Situational() {
                 ))}
                 {alerts.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-2 py-6 text-center text-gray-500">暂无告警数据</td>
+                    <td colSpan={8} className="px-2 py-6 text-center text-gray-500">
+                      暂无告警数据
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -658,7 +706,12 @@ export default function Situational() {
                 上一页
               </Button>
               <span className="text-xs text-gray-400">第 {page} 页</span>
-              <Button size="sm" variant="outline" disabled={alerts.length < PAGE_SIZE} onClick={() => setPage((p) => p + 1)}>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={alerts.length < PAGE_SIZE}
+                onClick={() => setPage((p) => p + 1)}
+              >
                 下一页
               </Button>
             </div>
@@ -695,7 +748,9 @@ export default function Situational() {
                 ))}
                 {paginatedIntel.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-2 py-6 text-center text-gray-500">暂无威胁情报数据</td>
+                    <td colSpan={7} className="px-2 py-6 text-center text-gray-500">
+                      暂无威胁情报数据
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -746,10 +801,18 @@ export default function Situational() {
                 </td>
                 <td className="px-2 py-2">
                   <div className="flex gap-3">
-                    <button type="button" onClick={() => viewReport(r)} className="text-xs text-cyan-400 hover:text-cyan-300">
+                    <button
+                      type="button"
+                      onClick={() => viewReport(r)}
+                      className="text-xs text-cyan-400 hover:text-cyan-300"
+                    >
                       查看
                     </button>
-                    <button type="button" onClick={() => deleteReport(r)} className="text-xs text-red-400 hover:text-red-300">
+                    <button
+                      type="button"
+                      onClick={() => deleteReport(r)}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
                       删除
                     </button>
                   </div>
@@ -758,7 +821,9 @@ export default function Situational() {
             ))}
             {reports.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-2 py-6 text-center text-gray-500">暂无报告，点击右上角生成</td>
+                <td colSpan={4} className="px-2 py-6 text-center text-gray-500">
+                  暂无报告，点击右上角生成
+                </td>
               </tr>
             )}
           </tbody>
@@ -766,11 +831,7 @@ export default function Situational() {
       </div>
 
       {/* 报告预览 */}
-      <Dialog
-        open={!!preview}
-        onOpenChange={(open) => !open && setPreview(null)}
-        title={preview?.title || '报告预览'}
-      >
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)} title={preview?.title || '报告预览'}>
         <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap rounded-lg bg-black/30 p-4 text-xs text-gray-300">
           {preview?.content || '暂无内容'}
         </pre>

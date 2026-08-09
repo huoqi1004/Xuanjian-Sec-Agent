@@ -383,7 +383,9 @@ export default function Baseline() {
               ))}
               {policies.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-2 py-6 text-center text-gray-500">暂无基线策略</td>
+                  <td colSpan={5} className="px-2 py-6 text-center text-gray-500">
+                    暂无基线策略
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -428,7 +430,9 @@ export default function Baseline() {
             ))}
             {recentTasks.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-2 py-6 text-center text-gray-500">暂无检查任务，请选择策略启动检查</td>
+                <td colSpan={5} className="px-2 py-6 text-center text-gray-500">
+                  暂无检查任务，请选择策略启动检查
+                </td>
               </tr>
             )}
           </tbody>

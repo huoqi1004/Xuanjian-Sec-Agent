@@ -310,11 +310,7 @@ export default function Defense() {
   async function reviewApproval(a: PolicyApproval, approved: boolean) {
     if (a.approval_id === undefined) return;
     try {
-      await defenseApi.approve(
-        a.approval_id,
-        approved ? 'approved' : 'rejected',
-        approved ? '审批通过' : '审批驳回'
-      );
+      await defenseApi.approve(a.approval_id, approved ? 'approved' : 'rejected', approved ? '审批通过' : '审批驳回');
       toast({ title: approved ? '已审批通过' : '已驳回', variant: 'success' });
       loadData();
     } catch {
@@ -394,7 +390,10 @@ export default function Defense() {
                       <td className="max-w-[200px] truncate px-2 py-2 text-gray-400" title={p.description || ''}>
                         {p.description || '-'}
                       </td>
-                      <td className="max-w-[220px] truncate px-2 py-2 text-gray-400" title={conditionsText(p.conditions)}>
+                      <td
+                        className="max-w-[220px] truncate px-2 py-2 text-gray-400"
+                        title={conditionsText(p.conditions)}
+                      >
                         {conditionsText(p.conditions)}
                       </td>
                       <td className="max-w-[160px] truncate px-2 py-2 text-gray-400" title={actionsText(p.actions)}>
@@ -445,12 +444,7 @@ export default function Defense() {
                 )}
               </tbody>
             </Table>
-            <Pagination
-              page={policyPage}
-              total={policies.length}
-              pageSize={PAGE_SIZE}
-              onChange={setPolicyPage}
-            />
+            <Pagination page={policyPage} total={policies.length} pageSize={PAGE_SIZE} onChange={setPolicyPage} />
           </>
         )}
 
@@ -458,9 +452,7 @@ export default function Defense() {
         {activeTab === 'approvals' && (
           <>
             {approvals.length === 0 ? (
-              <div className="py-10 text-center text-sm text-gray-500">
-                {loading ? '加载中…' : '暂无待审批策略'}
-              </div>
+              <div className="py-10 text-center text-sm text-gray-500">{loading ? '加载中…' : '暂无待审批策略'}</div>
             ) : (
               <Table>
                 <thead>
@@ -480,7 +472,10 @@ export default function Defense() {
                     <tr key={a.approval_id ?? a.id} className="hover:bg-white/5">
                       <td className="px-2 py-2 font-mono text-xs text-gray-400">{a.id ?? '-'}</td>
                       <td className="px-2 py-2 text-gray-300">{a.name || '-'}</td>
-                      <td className="max-w-[220px] truncate px-2 py-2 text-gray-400" title={conditionsText(a.conditions, a.description)}>
+                      <td
+                        className="max-w-[220px] truncate px-2 py-2 text-gray-400"
+                        title={conditionsText(a.conditions, a.description)}
+                      >
                         {conditionsText(a.conditions, a.description)}
                       </td>
                       <td className="max-w-[160px] truncate px-2 py-2 text-gray-400" title={actionsText(a.actions)}>
@@ -591,7 +586,8 @@ export default function Defense() {
           </div>
           <div>
             <label className="mb-1 block text-xs text-gray-400">
-              触发条件（JSON 数组，例：[{'{'} "field": "login_failures", "operator": "greaterThan", "value": 10 {'}'} ]）
+              触发条件（JSON 数组，例：[{'{'} "field": "login_failures", "operator": "greaterThan", "value": 10 {'}'}{' '}
+              ]）
             </label>
             <textarea
               className={`${fieldCls} w-full resize-none font-mono text-xs`}

@@ -207,7 +207,6 @@ export default function Playbook() {
   useEffect(() => {
     loadList();
     loadApprovals();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const paginated = useMemo(() => {
@@ -308,9 +307,7 @@ export default function Playbook() {
 
   function openExecute(p: Playbook) {
     setExecTarget(p);
-    setEventJson(
-      JSON.stringify({ ip: '185.220.101.34', severity: 'high', confidence: 0.9, fail_count: 8 }, null, 2)
-    );
+    setEventJson(JSON.stringify({ ip: '185.220.101.34', severity: 'high', confidence: 0.9, fail_count: 8 }, null, 2));
     setExecVisible(true);
   }
 
@@ -574,11 +571,7 @@ export default function Playbook() {
       </Dialog>
 
       {/* 执行结果弹窗 */}
-      <Dialog
-        open={resultVisible}
-        onOpenChange={(open) => !open && setResultVisible(false)}
-        title="执行结果"
-      >
+      <Dialog open={resultVisible} onOpenChange={(open) => !open && setResultVisible(false)} title="执行结果">
         <div className="space-y-3">
           <div
             className={`rounded-md border px-3 py-2 text-sm ${
@@ -635,11 +628,7 @@ export default function Playbook() {
       </Dialog>
 
       {/* 待审批 */}
-      <Dialog
-        open={approvalVisible}
-        onOpenChange={(open) => !open && setApprovalVisible(false)}
-        title="待人工审批"
-      >
+      <Dialog open={approvalVisible} onOpenChange={(open) => !open && setApprovalVisible(false)} title="待人工审批">
         {pendingApprovals.length === 0 ? (
           <div className="py-8 text-center text-sm text-gray-500">暂无待审批事项</div>
         ) : (

@@ -698,7 +698,8 @@ export default function Users() {
         }
       >
         <p className="text-sm text-gray-700">
-          确定要删除用户 <span className="font-semibold text-gray-900">{deleteTarget?.username}</span> 吗？此操作不可恢复。
+          确定要删除用户 <span className="font-semibold text-gray-900">{deleteTarget?.username}</span>{' '}
+          吗？此操作不可恢复。
         </p>
       </Dialog>
     </div>

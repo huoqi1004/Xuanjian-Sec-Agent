@@ -274,7 +274,10 @@ export default function Reports() {
             </thead>
             <tbody className="divide-y divide-white/5">
               {reports.map((r) => {
-                const badge = TYPE_BADGE[r.type] || { label: r.typeLabel || r.type, variant: 'default' as BadgeVariant };
+                const badge = TYPE_BADGE[r.type] || {
+                  label: r.typeLabel || r.type,
+                  variant: 'default' as BadgeVariant
+                };
                 return (
                   <tr key={r.id} className="hover:bg-white/5">
                     <td className="px-2 py-2 text-gray-400">{r.id}</td>

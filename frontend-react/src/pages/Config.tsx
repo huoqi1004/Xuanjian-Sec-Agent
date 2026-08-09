@@ -54,7 +54,6 @@ export default function Config() {
   useEffect(() => {
     loadConfigs();
     loadBackups();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function openEdit(item: ConfigItem) {
@@ -248,9 +247,7 @@ export default function Config() {
 
       {/* 恢复确认 */}
       <Dialog open={!!restoreTarget} onOpenChange={(open) => !open && setRestoreTarget(null)} title="确认恢复">
-        <p className="text-sm text-gray-600">
-          确定要恢复此备份（{restoreTarget?.filename}）吗？当前配置将被覆盖。
-        </p>
+        <p className="text-sm text-gray-600">确定要恢复此备份（{restoreTarget?.filename}）吗？当前配置将被覆盖。</p>
         <div className="mt-4 flex justify-end gap-2">
           <Button size="sm" variant="outline" onClick={() => setRestoreTarget(null)}>
             取消

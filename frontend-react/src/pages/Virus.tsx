@@ -317,12 +317,21 @@ export default function Virus() {
         >
           <div className="text-4xl">📁</div>
           <div className="mt-2 text-sm text-gray-300">
-            {selectedFile ? `已选择: ${selectedFile.name} (${formatSize(selectedFile.size)})` : '将文件拖到此处，或点击上传'}
+            {selectedFile
+              ? `已选择: ${selectedFile.name} (${formatSize(selectedFile.size)})`
+              : '将文件拖到此处，或点击上传'}
           </div>
           <div className="mt-1 text-xs text-gray-500">
             支持所有文件类型，多引擎并行扫描
             {selectedFile && (
-              <span className="ml-2 cursor-pointer text-cyan-400" onClick={(e) => { e.stopPropagation(); setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>
+              <span
+                className="ml-2 cursor-pointer text-cyan-400"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedFile(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              >
                 移除
               </span>
             )}
@@ -409,7 +418,12 @@ export default function Virus() {
           style={{
             background: 'rgba(26,26,46,0.8)',
             border:
-              '2px solid ' + (detectResult.verdict === 'malicious' ? '#f56c6c' : detectResult.verdict === 'suspicious' ? '#e6a23c' : '#67c23a')
+              '2px solid ' +
+              (detectResult.verdict === 'malicious'
+                ? '#f56c6c'
+                : detectResult.verdict === 'suspicious'
+                  ? '#e6a23c'
+                  : '#67c23a')
           }}
         >
           <div className="mb-4 flex items-center gap-4">

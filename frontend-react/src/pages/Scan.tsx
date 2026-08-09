@@ -327,7 +327,9 @@ export default function Scan() {
             ))}
             {paginatedTasks.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-2 py-6 text-center text-gray-500">暂无扫描任务</td>
+                <td colSpan={8} className="px-2 py-6 text-center text-gray-500">
+                  暂无扫描任务
+                </td>
               </tr>
             )}
           </tbody>
@@ -339,7 +341,12 @@ export default function Scan() {
           <span className="text-xs text-gray-400">
             第 {taskPage} / {taskTotalPages} 页（共 {tasks.length} 条）
           </span>
-          <Button size="sm" variant="outline" disabled={taskPage >= taskTotalPages} onClick={() => setTaskPage((p) => p + 1)}>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={taskPage >= taskTotalPages}
+            onClick={() => setTaskPage((p) => p + 1)}
+          >
             下一页
           </Button>
         </div>
@@ -385,23 +392,36 @@ export default function Scan() {
                         <td className="px-2 py-2 text-gray-300">{r.version || '-'}</td>
                         <td className="max-w-[260px] truncate px-2 py-2 text-gray-400">{r.banner || '-'}</td>
                         <td className="px-2 py-2">
-                          {r.state === 'open' ? <Badge variant="success">开放</Badge> : <Badge variant="default">{r.state || '-'}</Badge>}
+                          {r.state === 'open' ? (
+                            <Badge variant="success">开放</Badge>
+                          ) : (
+                            <Badge variant="default">{r.state || '-'}</Badge>
+                          )}
                         </td>
                       </tr>
                     ))}
                     {paginatedResults.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-2 py-6 text-center text-gray-500">该任务暂无扫描结果</td>
+                        <td colSpan={6} className="px-2 py-6 text-center text-gray-500">
+                          该任务暂无扫描结果
+                        </td>
                       </tr>
                     )}
                   </tbody>
                 </Table>
               )}
               <div className="mt-4 flex items-center justify-end gap-3">
-                <Button size="sm" variant="outline" disabled={resultPage <= 1} onClick={() => setResultPage((p) => p - 1)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={resultPage <= 1}
+                  onClick={() => setResultPage((p) => p - 1)}
+                >
                   上一页
                 </Button>
-                <span className="text-xs text-gray-400">第 {resultPage} / {resultTotalPages} 页</span>
+                <span className="text-xs text-gray-400">
+                  第 {resultPage} / {resultTotalPages} 页
+                </span>
                 <Button
                   size="sm"
                   variant="outline"

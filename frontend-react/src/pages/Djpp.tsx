@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { djppApi } from '@/api';
-import type { DjppCategory, DjppCheck, DjppLevel, DjppReport, DjppReportData, DjppResult, DjppTask, DjppTaskDetail } from '@/api';
+import type {
+  DjppCategory,
+  DjppCheck,
+  DjppLevel,
+  DjppReport,
+  DjppReportData,
+  DjppResult,
+  DjppTask,
+  DjppTaskDetail
+} from '@/api';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 import Dialog from '@/components/ui/dialog';
@@ -169,7 +178,6 @@ export default function Djpp() {
     if (levels.length > 0) {
       loadLevelBrowse(selectedLevel);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLevel, levels]);
 
   // 存在执行中/待执行任务时，3s 轮询刷新进度
@@ -355,7 +363,9 @@ export default function Djpp() {
             type="button"
             onClick={() => setActiveTab(key)}
             className={`border-b-2 px-1 pb-2 text-sm transition-colors ${
-              activeTab === key ? 'border-cyan-400 text-cyan-300' : 'border-transparent text-gray-400 hover:text-gray-200'
+              activeTab === key
+                ? 'border-cyan-400 text-cyan-300'
+                : 'border-transparent text-gray-400 hover:text-gray-200'
             }`}
           >
             {label}
@@ -755,9 +765,7 @@ export default function Djpp() {
                           <td className="px-2 py-2 text-gray-300">{r.check_name}</td>
                           <td className="max-w-[240px] truncate px-2 py-2 text-gray-400">{r.actual_value || '-'}</td>
                           <td className="px-2 py-2">
-                            <Badge variant={resultStatusTag(r.status).variant}>
-                              {resultStatusTag(r.status).label}
-                            </Badge>
+                            <Badge variant={resultStatusTag(r.status).variant}>{resultStatusTag(r.status).label}</Badge>
                           </td>
                           <td className="px-2 py-2">
                             <Badge variant={severityTag(r.severity).variant}>{severityTag(r.severity).label}</Badge>

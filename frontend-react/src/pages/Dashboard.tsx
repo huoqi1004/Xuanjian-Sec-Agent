@@ -185,7 +185,9 @@ export default function Dashboard() {
     const trend = dashboard?.threat_trend || [];
     const dates = trend.length ? trend.map((t) => t.date) : demo.trendDates;
     const counts = trend.length ? trend.map((t) => t.count) : demo.trendCounts;
-    const resolved = trend.length ? counts.map((c) => Math.max(0, c - Math.floor(Math.random() * 3 + 1))) : demo.resolvedCounts;
+    const resolved = trend.length
+      ? counts.map((c) => Math.max(0, c - Math.floor(Math.random() * 3 + 1)))
+      : demo.resolvedCounts;
     return {
       tooltip: {
         trigger: 'axis' as const,
@@ -193,7 +195,13 @@ export default function Dashboard() {
         borderColor: 'rgba(0,212,255,0.2)',
         textStyle: { color: '#c0c0c0' }
       },
-      legend: { data: ['威胁事件', '已处理'], top: '5%', textStyle: { color: '#c0c0c0' }, itemWidth: 16, itemHeight: 3 },
+      legend: {
+        data: ['威胁事件', '已处理'],
+        top: '5%',
+        textStyle: { color: '#c0c0c0' },
+        itemWidth: 16,
+        itemHeight: 3
+      },
       grid: { left: '3%', right: '4%', bottom: '3%', top: '18%', containLabel: true },
       xAxis: {
         type: 'category' as const,
@@ -217,10 +225,17 @@ export default function Dashboard() {
           lineStyle: { color: '#f56c6c', width: 2 },
           itemStyle: { color: '#f56c6c' },
           areaStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-              { offset: 0, color: 'rgba(245,108,108,0.2)' },
-              { offset: 1, color: 'rgba(245,108,108,0)' }
-            ] }
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(245,108,108,0.2)' },
+                { offset: 1, color: 'rgba(245,108,108,0)' }
+              ]
+            }
           }
         },
         {
@@ -231,10 +246,17 @@ export default function Dashboard() {
           lineStyle: { color: '#67c23a', width: 2 },
           itemStyle: { color: '#67c23a' },
           areaStyle: {
-            color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [
-              { offset: 0, color: 'rgba(103,194,58,0.2)' },
-              { offset: 1, color: 'rgba(103,194,58,0)' }
-            ] }
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: 'rgba(103,194,58,0.2)' },
+                { offset: 1, color: 'rgba(103,194,58,0)' }
+              ]
+            }
           }
         }
       ]
@@ -318,12 +340,20 @@ export default function Dashboard() {
           <p className="mt-1 text-sm text-gray-400">多引擎协同安全评估系统 - 实时安全态势监控</p>
         </div>
         <div className="flex gap-2">
-          <Button size="sm" onClick={() => navigate('/scan')}>启动扫描</Button>
-          <Button size="sm" variant="outline" onClick={() => navigate('/situational')}>查看态势</Button>
+          <Button size="sm" onClick={() => navigate('/scan')}>
+            启动扫描
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => navigate('/situational')}>
+            查看态势
+          </Button>
         </div>
       </div>
 
-      {loading && <div className="rounded-lg border border-cyan-500/20 bg-[#16213e]/60 px-4 py-3 text-sm text-cyan-300/70">加载中…</div>}
+      {loading && (
+        <div className="rounded-lg border border-cyan-500/20 bg-[#16213e]/60 px-4 py-3 text-sm text-cyan-300/70">
+          加载中…
+        </div>
+      )}
 
       {/* KPI 卡片 */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
@@ -361,36 +391,38 @@ export default function Dashboard() {
           <div className="mb-4 text-sm font-semibold text-cyan-300">最近告警</div>
           <Table>
             <thead>
-                <tr className="border-b border-cyan-500/20 text-left text-xs text-cyan-200/70">
-                  <th className="px-2 py-2 font-medium">ID</th>
-                  <th className="px-2 py-2 font-medium">类型</th>
-                  <th className="px-2 py-2 font-medium">等级</th>
-                  <th className="px-2 py-2 font-medium">资产</th>
-                  <th className="px-2 py-2 font-medium">状态</th>
-                  <th className="px-2 py-2 font-medium">时间</th>
+              <tr className="border-b border-cyan-500/20 text-left text-xs text-cyan-200/70">
+                <th className="px-2 py-2 font-medium">ID</th>
+                <th className="px-2 py-2 font-medium">类型</th>
+                <th className="px-2 py-2 font-medium">等级</th>
+                <th className="px-2 py-2 font-medium">资产</th>
+                <th className="px-2 py-2 font-medium">状态</th>
+                <th className="px-2 py-2 font-medium">时间</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {recentAlerts.map((a) => (
+                <tr key={a.id} className="hover:bg-white/5">
+                  <td className="px-2 py-2 text-gray-400">{a.id}</td>
+                  <td className="px-2 py-2 text-gray-300">{a.type}</td>
+                  <td className="px-2 py-2">
+                    <Badge variant={getLevelTag(a.level).variant}>{getLevelTag(a.level).label}</Badge>
+                  </td>
+                  <td className="px-2 py-2 text-gray-300">{a.asset}</td>
+                  <td className="px-2 py-2">
+                    <Badge variant={getStatusTag(a.status).variant}>{getStatusTag(a.status).label}</Badge>
+                  </td>
+                  <td className="px-2 py-2 text-gray-400">{a.time}</td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {recentAlerts.map((a) => (
-                  <tr key={a.id} className="hover:bg-white/5">
-                    <td className="px-2 py-2 text-gray-400">{a.id}</td>
-                    <td className="px-2 py-2 text-gray-300">{a.type}</td>
-                    <td className="px-2 py-2">
-                      <Badge variant={getLevelTag(a.level).variant}>{getLevelTag(a.level).label}</Badge>
-                    </td>
-                    <td className="px-2 py-2 text-gray-300">{a.asset}</td>
-                    <td className="px-2 py-2">
-                      <Badge variant={getStatusTag(a.status).variant}>{getStatusTag(a.status).label}</Badge>
-                    </td>
-                    <td className="px-2 py-2 text-gray-400">{a.time}</td>
-                  </tr>
-                ))}
-                {recentAlerts.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-2 py-6 text-center text-gray-500">暂无告警数据</td>
-                  </tr>
-                )}
-              </tbody>
+              ))}
+              {recentAlerts.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-2 py-6 text-center text-gray-500">
+                    暂无告警数据
+                  </td>
+                </tr>
+              )}
+            </tbody>
           </Table>
         </div>
       </div>

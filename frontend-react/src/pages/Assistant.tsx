@@ -32,7 +32,6 @@ export default function Assistant() {
 
   useEffect(() => {
     loadHistory();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -59,10 +58,7 @@ export default function Assistant() {
     setLoading(true);
     try {
       const reply = await aiApi.chat(text, CONVERSATION_ID);
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: reply.content, is_report: reply.is_report }
-      ]);
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply.content, is_report: reply.is_report }]);
     } catch {
       setMessages((prev) => [...prev, { role: 'assistant', content: '❌ 网络错误，请稍后重试' }]);
     } finally {
@@ -106,10 +102,7 @@ export default function Assistant() {
           {messages.map((msg, idx) => {
             const isUser = msg.role === 'user';
             return (
-              <div
-                key={idx}
-                className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
-              >
+              <div key={idx} className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base ${
                     isUser
