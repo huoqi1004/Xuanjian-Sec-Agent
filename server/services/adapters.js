@@ -15,6 +15,7 @@ const { getDb } = require('../db/database');
 const notifyService = require('./notifyService');
 const logger = require('../utils/logger');
 const switchAcl = require('./adapters/switchAcl');
+const cloudSg = require('./adapters/cloudSg');
 
 const adapters = {
   firewall_block: async (params) => {
@@ -67,7 +68,9 @@ const adapters = {
   },
 
   switch_acl_block: async (params) => switchAcl.switchAclBlock(params),
-  switch_acl_unblock: async (params) => switchAcl.switchAclUnblock(params)
+  switch_acl_unblock: async (params) => switchAcl.switchAclUnblock(params),
+  cloud_sg_block: async (params) => cloudSg.cloudSgBlock(params),
+  cloud_sg_unblock: async (params) => cloudSg.cloudSgUnblock(params)
 };
 
 /**
