@@ -32,7 +32,7 @@
 | N-20 | 领导视图数据大屏页 | P2 | Phase 5 | 待排期 |
 | N-21 | 报告统一模板引擎 | P2 | Phase 5 | 待排期 |
 | N-22 | 设备详情"检查执行"入口 UI | P2 | Phase 2 | 待排期 |
-| N-23 | 真实动作适配器（交换机 / 云安全组） | P2 | Phase 5 | 待排期 |
+| N-23 | 真实动作适配器（交换机 / 云安全组） | P2 | Phase 5 | ✅ 已完成 |
 | N-24 | 测试覆盖补全（Vitest / 覆盖率 ≥ 70%） | P1 | Phase 3 | 待排期 |
 
 ---
@@ -234,12 +234,19 @@
 - **涉及**：`frontend-app/src/views/Device.vue`、`deviceService.js`。
 - **验收**：对 Agent 主机一键发起检查并展示结果。
 
-### N-23 真实动作适配器（交换机 / 云安全组）
+### N-23 真实动作适配器（交换机 / 云安全组） ✅ 已完成（2026-08-09）
 - **现状**：SOAR 适配器为本地落库模拟（firewall_block 写日志+告警）。
 - **目标**：对接真实设备：交换机 ACL、云安全组（阿里云/腾讯云 API）、SIEM Webhook。
 - **涉及**：`services/adapters.js`、配置化凭据管理。
 - **注意**：高危动作保留人工审批，凭据加密存储。
 - **验收**：在测试环境完成一次真实封禁动作并留痕。
+- **实现**：
+  - `server/utils/credentialStore.js`：凭据 AES-256-GCM 加密存 sys_config（密钥 `ADAPTER_SECRET`>JWT_SECRET，生产弱密钥拒绝启动），list 脱敏 `***`；
+  - `server/services/adapters/switchAcl.js`：交换机 ACL（华为/H3C/思科命令模板可配，SSH 执行，dry-run 可验证）；
+  - `server/services/adapters/cloudSg.js`：云安全组封禁/解封（阿里云 RPC-V1 + 腾讯云 TC3-HMAC-SHA256 签名，签名经官方向量对拍，dry-run 可验证）；
+  - `siem_webhook`：标准 SIEM 事件推送（Bearer/Basic 鉴权 + 重试）；
+  - `server/routes/adapters.js`：凭据 CRUD + 适配器目录接口；前端 Config 页新增"SOAR 适配器"区块（凭据管理）；
+  - 全部动作双落审计（action_logs + audit_logs）；后端 Jest 132 用例全绿。
 
 ---
 

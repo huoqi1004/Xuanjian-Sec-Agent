@@ -157,6 +157,12 @@ docker-compose up -d
 - `POST /api/device/register` - 设备注册
 - `POST /api/device/:id/command` - 下发指令
 
+### SOAR 适配器接口（N-23）
+- `GET /api/adapters/list` - 适配器目录
+- `GET /api/adapters/credentials` - 凭据列表（脱敏）
+- `PUT /api/adapters/credentials` - 保存凭据（AES-256-GCM 加密存储）
+- `DELETE /api/adapters/credentials` - 删除凭据
+
 ## 技术栈
 
 - **后端**: Express.js, better-sqlite3（可切 MySQL/PG）, jsonwebtoken, json-rules-engine

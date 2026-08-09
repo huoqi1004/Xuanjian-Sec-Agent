@@ -427,7 +427,8 @@ Phase 5（P2）商业化与产品化
   - 审批步骤挂起剧本 → 批准后自动继续执行剩余步骤，拒绝则终止
   - 执行日志（action_logs，type=playbook_run）+ 指标（soar_runs_total）
 - [x] 动作适配器 `server/services/adapters.js`：firewall_block / account_lock / raise_alert / notify(SMTP) / webhook / log_only
-  - [ ] 交换机、云安全组真实适配器（待排期）
+- [x] 真实动作适配器（N-23，2026-08-09）：`switchAcl.js`（交换机 ACL，华为/H3C/思科模板可配 + SSH + dry-run）、`cloudSg.js`（云安全组，阿里云 RPC-V1 + 腾讯云 TC3 签名 + dry-run）、`siem_webhook`（标准 SIEM 事件推送）；凭据 `credentialStore.js` AES-256-GCM 加密存 sys_config；`/api/adapters/*` 凭据管理接口 + React Config 页"SOAR 适配器"区块；全部动作双落审计
+  - [ ] 真实设备/云账号环境端到端实测（dry-run 已单测验证，真实调用待接入设备后执行）
 - [x] 剧本模板库：暴力破解自动防御 / 恶意IP自动封禁 / 勒索告警应急响应（启动幂等导入）
 - [x] 接口：剧本 CRUD + 执行 + 待审批 + 审批（`/api/playbook/*`）
 - [x] 前端 SOAR 编排页（Playbook.vue）：列表/新建/编辑（步骤 JSON）/详情时间线/执行/审批，仅管理员可见
