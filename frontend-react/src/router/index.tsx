@@ -5,9 +5,11 @@ import AgentWorkbench from '@/pages/AgentWorkbench';
 import Assistant from '@/pages/Assistant';
 import Dashboard from '@/pages/Dashboard';
 import Defense from '@/pages/Defense';
+import Device from '@/pages/Device';
 import Djpp from '@/pages/Djpp';
 import Login from '@/pages/Login';
 import Situational from '@/pages/Situational';
+import Users from '@/pages/Users';
 import Virus from '@/pages/Virus';
 import { useUserStore } from '@/stores/user';
 
@@ -33,6 +35,8 @@ export const router = createBrowserRouter([
       { path: 'defense', element: <Defense /> },
       { path: 'situational', element: <Situational /> },
       { path: 'agent', element: <AgentWorkbench /> },
+      { path: 'device', element: <Device /> },
+      { path: 'users', element: <Users /> },
       { path: 'virus', element: <Virus /> },
       { path: 'djpp', element: <Djpp /> }
     ]

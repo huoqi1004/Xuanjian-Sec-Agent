@@ -557,10 +557,122 @@ export const aiApi = {
     requestData<null>({ method: 'DELETE', url: `/ai/history/${conversation_id}` })
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const deviceApi = {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const userApi = {} as any;
+// ============ 边缘设备 ============
+export interface EdgeDevice {
+  id?: number;
+  device_id: string;
+  token?: string;
+  ip?: string;
+  device_type?: string;
+  online_status?: number;
+  last_heartbeat?: string;
+  metrics?: Record<string, unknown>;
+  agent_version?: string;
+  registered_at?: string;
+}
+
+export interface DeviceCommand {
+  id: number;
+  device_id: string;
+  command: string;
+  params?: string | Record<string, unknown>;
+  status?: string;
+  result?: string | Record<string, unknown> | null;
+  created_at?: string;
+  executed_at?: string;
+}
+
+export const deviceApi = {
+  /** 设备列表（分页/在线状态过滤） */
+  list: (params?: { page?: number; pageSize?: number; online_status?: number | string }) =>
+    requestData<PageResult<EdgeDevice>>({ method: 'GET', url: '/device/list', params }),
+  /** 注册新设备 */
+  register: (data: { device_id: string; device_type?: string; ip?: string }) =>
+    requestData<{ device_id: string; token?: string; ip?: string; device_type?: string; message?: string }>({
+      method: 'POST',
+      url: '/device/register',
+      data
+    }),
+  /** 设备状态详情 */
+  status: (deviceId: string) =>
+    requestData<EdgeDevice & { is_online?: boolean; heartbeat_age?: number | null }>({
+      method: 'GET',
+      url: `/device/${deviceId}/status`
+    }),
+  /** 下发指令（指令须在服务端白名单内） */
+  sendCommand: (deviceId: string, command: string, params: Record<string, unknown>) =>
+    requestData<{ command_id: number; device_id: string; command: string; status: string }>({
+      method: 'POST',
+      url: `/device/${deviceId}/command`,
+      data: { command, params }
+    }),
+  /** 指令历史（分页） */
+  commands: (deviceId: string, params?: { page?: number; pageSize?: number }) =>
+    requestData<PageResult<DeviceCommand>>({ method: 'GET', url: `/device/${deviceId}/commands`, params }),
+  /** 注销设备（管理员） */
+  unregister: (deviceId: string) =>
+    requestData<null>({ method: 'POST', url: `/device/${deviceId}/unregister` })
+};
+
+// ============ 用户管理 ============
+export interface UserRecord {
+  id: number;
+  username: string;
+  role_id: number;
+  role_name?: string;
+  department?: string;
+  org_id?: number;
+  org_name?: string;
+  status?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Org {
+  id: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface AuditLog {
+  id: number;
+  username?: string;
+  operation_type?: string;
+  operation_target?: string;
+  client_ip?: string;
+  result?: string;
+  created_at?: string;
+}
+
+export const userApi = {
+  /** 用户列表（按组织过滤，admin 可传 org_id 跨组织查看） */
+  list: (params?: { page?: number; pageSize?: number; keyword?: string; org_id?: number | string }) =>
+    requestData<PageResult<UserRecord> & { org_id?: number }>({ method: 'GET', url: '/user/list', params }),
+  /** 新建用户（管理员） */
+  create: (data: { username: string; password: string; role_id?: number; department?: string; org_id?: number }) =>
+    requestData<{ id: number }>({ method: 'POST', url: '/auth/register', data }),
+  /** 更新用户（角色/部门/状态） */
+  update: (id: number, data: { role_id?: number; department?: string; status?: number; username?: string }) =>
+    requestData<null>({ method: 'PUT', url: `/user/${id}`, data }),
+  /** 删除用户（管理员） */
+  remove: (id: number) => requestData<null>({ method: 'DELETE', url: `/user/${id}` }),
+  /** 组织列表（管理员） */
+  orgs: () => requestData<Org[]>({ method: 'GET', url: '/user/orgs' }),
+  /** 创建组织（管理员） */
+  createOrg: (data: { name: string; description?: string }) =>
+    requestData<{ id: number; name: string }>({ method: 'POST', url: '/user/orgs', data }),
+  /** 审计日志 */
+  auditLogs: (params?: {
+    page?: number;
+    pageSize?: number;
+    username?: string;
+    operation_type?: string;
+    start_date?: string;
+    end_date?: string;
+  }) => requestData<AuditLog[]>({ method: 'GET', url: '/user/audit-logs', params })
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const playbookApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
