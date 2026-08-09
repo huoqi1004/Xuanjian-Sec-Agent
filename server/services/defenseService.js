@@ -1,5 +1,6 @@
 const { Engine } = require('json-rules-engine');
 const { getDb } = require('../db/database');
+const { getQueue } = require('./queue');
 const { generateId } = require('../utils/helpers');
 const logger = require('../utils/logger');
 
@@ -181,9 +182,9 @@ async function evaluatePolicies(facts) {
     }
   }
 
-  // 执行触发的策略动作
+  // 执行触发的策略动作（异步化：入队执行，避免阻塞评估主流程；大量策略同时触发时由队列控制并发与重试）
   for (const policy of triggeredPolicies) {
-    await executePolicyActions(policy, facts);
+    getQueue().add('defense_actions', { policy, facts }, { attempts: 2, backoff: 3000 });
     setCooldown(policy.id, policy.cooldown);
   }
 

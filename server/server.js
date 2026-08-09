@@ -33,6 +33,9 @@ async function startServer(options = {}) {
     await loadDbConfig();
     logger.info('数据库初始化完成');
 
+    // 注册统一任务队列处理器（威胁情报采集/报告生成/防御策略动作）
+    require('./services/queueHandlers');
+
     const app = express();
 
     app.use(helmet({
@@ -289,10 +292,8 @@ async function startServer(options = {}) {
     nodeCron.schedule(threatIntelCron, () => {
       logger.info('执行定时任务: 威胁情报采集');
       try {
-        const situationalService = require('./services/situationalService');
-        situationalService.collectThreatIntel().catch(err => {
-          logger.error('威胁情报采集失败:', err.message);
-        });
+        const { getQueue } = require('./services/queue');
+        getQueue().add('threat_intel_collect', {}, { attempts: 2, backoff: 5000 });
       } catch (err) {
         logger.error('威胁情报采集失败:', err.message);
       }
@@ -356,19 +357,13 @@ async function startServer(options = {}) {
     }
 
     // 安全周报生成与推送（每周一 08:00，REPORT_CRON 可调整）
+    // 生成任务入队执行，完成后由 queueHandlers 的 completed:report_generate 事件推送通知
     try {
       const reportCron = process.env.REPORT_CRON || '0 8 * * 1';
-      nodeCron.schedule(reportCron, async () => {
+      nodeCron.schedule(reportCron, () => {
         try {
-          const situationalService = require('./services/situationalService');
-          const report = await situationalService.generateReport('安全态势周报', 'weekly', 'weekly', 1);
-          const notifyService = require('./services/notifyService');
-          await notifyService.send({
-            channel: 'all',
-            message: `安全态势周报已生成：${report.title}（报告ID ${report.id}）`,
-            severity: 'medium'
-          });
-          logger.info(`定时周报已生成并推送: ${report.title}`);
+          const { getQueue } = require('./services/queue');
+          getQueue().add('report_generate', { title: '安全态势周报', type: 'weekly', time_range: 'weekly', userId: 1, notify: true }, { attempts: 2, backoff: 5000 });
         } catch (err) {
           logger.error('定时周报生成失败:', err.message);
         }

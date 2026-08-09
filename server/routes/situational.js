@@ -51,12 +51,13 @@ router.get('/threat-intel', checkPermission('GET'), asyncHandler(async (req, res
 }));
 
 /**
- * POST /api/situational/report - 生成安全报告
+ * POST /api/situational/report - 生成安全报告（异步入队执行）
  */
 router.post('/report', checkPermission('POST'), auditLog('report_generate'), asyncHandler(async (req, res) => {
   const { title, type, time_range } = req.body;
-  const report = await situationalService.generateReport(title, type, time_range, req.user.id);
-  return success(res, report, '报告生成完成');
+  const { getQueue } = require('../services/queue');
+  getQueue().add('report_generate', { title, type, time_range, userId: req.user.id }, { attempts: 2, backoff: 5000 });
+  return success(res, { queued: true, queue: 'report_generate', message: '报告生成任务已入队' }, '报告生成任务已入队');
 }));
 
 /**
