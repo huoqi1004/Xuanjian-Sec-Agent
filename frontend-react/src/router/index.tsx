@@ -2,7 +2,9 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import MainLayout from '@/layouts/MainLayout';
 import AgentWorkbench from '@/pages/AgentWorkbench';
+import Assistant from '@/pages/Assistant';
 import Dashboard from '@/pages/Dashboard';
+import Defense from '@/pages/Defense';
 import Djpp from '@/pages/Djpp';
 import Login from '@/pages/Login';
 import Situational from '@/pages/Situational';
@@ -27,6 +29,8 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
+      { path: 'assistant', element: <Assistant /> },
+      { path: 'defense', element: <Defense /> },
       { path: 'situational', element: <Situational /> },
       { path: 'agent', element: <AgentWorkbench /> },
       { path: 'virus', element: <Virus /> },

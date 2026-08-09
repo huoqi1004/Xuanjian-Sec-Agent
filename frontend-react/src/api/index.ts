@@ -437,8 +437,126 @@ export const djppApi = {
       url: `/reports/${reportId}/generate-docx`
     })
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const defenseApi = {} as any;
+// ============ 自动化防御 ============
+export interface AutoPolicy {
+  id: number;
+  name: string;
+  description?: string;
+  conditions: Array<Record<string, unknown>>;
+  actions: Array<Record<string, unknown>>;
+  cooldown: number;
+  unattended?: number | boolean;
+  enabled?: number | boolean;
+  approval_status?: string;
+  created_by?: number;
+  created_at?: string;
+}
+
+export interface PolicyApproval {
+  approval_id?: number;
+  id?: number;
+  policy_id?: number;
+  name?: string;
+  description?: string;
+  conditions?: unknown;
+  actions?: unknown;
+  requester_id?: number;
+  requester_name?: string;
+  status?: string;
+  risk_assessment?: string;
+  request_date?: string;
+  created_at?: string;
+}
+
+export interface ActionLog {
+  id: number;
+  policy_id?: number;
+  policy_name?: string;
+  action_type?: string;
+  action_detail?: string;
+  result?: string;
+  executed_at?: string;
+}
+
+export interface PageResult<T> {
+  list: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface PolicyPayload {
+  name: string;
+  description?: string;
+  conditions: Array<Record<string, unknown>>;
+  actions: Array<Record<string, unknown>>;
+  cooldown?: number;
+  unattended?: boolean;
+  enabled?: boolean;
+}
+
+export const defenseApi = {
+  /** 获取防御策略列表 */
+  policies: () => requestData<AutoPolicy[]>({ method: 'GET', url: '/defense/policies' }),
+  /** 创建防御策略 */
+  create: (data: PolicyPayload) =>
+    requestData<{ id: number; name: string; approval_status?: string }>({
+      method: 'POST',
+      url: '/defense/policies',
+      data
+    }),
+  /** 更新策略（名称/条件/动作/冷却/启停等） */
+  update: (id: number, data: Partial<PolicyPayload>) =>
+    requestData<AutoPolicy | null>({ method: 'PUT', url: `/defense/policies/${id}`, data }),
+  /** 启停策略 */
+  toggle: (id: number, enabled: boolean) =>
+    requestData<AutoPolicy | null>({ method: 'PUT', url: `/defense/policies/${id}`, data: { enabled } }),
+  /** 删除策略 */
+  remove: (id: number) => requestData<null>({ method: 'DELETE', url: `/defense/policies/${id}` }),
+  /** 待审批列表 */
+  pendingApprovals: () => requestData<PolicyApproval[]>({ method: 'GET', url: '/defense/pending-approvals' }),
+  /** 审批策略 */
+  approve: (approvalId: number, status: 'approved' | 'rejected', risk_assessment?: string) =>
+    requestData<PolicyApproval | null>({
+      method: 'POST',
+      url: `/defense/approvals/${approvalId}`,
+      data: { status, risk_assessment }
+    }),
+  /** 动作日志（分页） */
+  actionLogs: (params?: { page?: number; pageSize?: number; policy_id?: number }) =>
+    requestData<PageResult<ActionLog>>({ method: 'GET', url: '/defense/action-logs', params })
+};
+
+// ============ AI 安全助手 ============
+export interface ChatMessage {
+  role: string;
+  content: string;
+  is_report?: boolean;
+}
+
+export interface ChatReply {
+  content: string;
+  is_report: boolean;
+  conversation_id: string;
+}
+
+export interface ChatHistory {
+  conversation_id: string;
+  messages: ChatMessage[];
+}
+
+export const aiApi = {
+  /** 发送消息进行 AI 对话 */
+  chat: (message: string, conversation_id = 'default') =>
+    requestData<ChatReply>({ method: 'POST', url: '/ai/chat', data: { message, conversation_id } }),
+  /** 获取指定会话的历史消息 */
+  history: (conversation_id: string) =>
+    requestData<ChatHistory>({ method: 'GET', url: `/ai/history/${conversation_id}` }),
+  /** 清除指定会话历史 */
+  clearHistory: (conversation_id: string) =>
+    requestData<null>({ method: 'DELETE', url: `/ai/history/${conversation_id}` })
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const deviceApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -447,5 +565,3 @@ export const userApi = {} as any;
 export const playbookApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const configApi = {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const aiApi = {} as any;
