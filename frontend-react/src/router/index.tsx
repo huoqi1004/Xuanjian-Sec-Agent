@@ -3,11 +3,13 @@ import type { ReactNode } from 'react';
 import MainLayout from '@/layouts/MainLayout';
 import AgentWorkbench from '@/pages/AgentWorkbench';
 import Assistant from '@/pages/Assistant';
+import Config from '@/pages/Config';
 import Dashboard from '@/pages/Dashboard';
 import Defense from '@/pages/Defense';
 import Device from '@/pages/Device';
 import Djpp from '@/pages/Djpp';
 import Login from '@/pages/Login';
+import Playbook from '@/pages/Playbook';
 import Situational from '@/pages/Situational';
 import Users from '@/pages/Users';
 import Virus from '@/pages/Virus';
@@ -38,7 +40,9 @@ export const router = createBrowserRouter([
       { path: 'device', element: <Device /> },
       { path: 'users', element: <Users /> },
       { path: 'virus', element: <Virus /> },
-      { path: 'djpp', element: <Djpp /> }
+      { path: 'djpp', element: <Djpp /> },
+      { path: 'playbook', element: <Playbook /> },
+      { path: 'config', element: <Config /> }
     ]
   },
   { path: '*', element: <Navigate to="/dashboard" replace /> }

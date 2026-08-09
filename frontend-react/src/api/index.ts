@@ -673,7 +673,122 @@ export const userApi = {
   }) => requestData<AuditLog[]>({ method: 'GET', url: '/user/audit-logs', params })
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const playbookApi = {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const configApi = {} as any;
+// ============ SOAR 剧本 ============
+export interface PlaybookStep {
+  type?: string;
+  name?: string;
+  fact?: string;
+  operator?: string;
+  value?: unknown;
+  action?: string;
+  params?: Record<string, unknown>;
+  channel?: string;
+  message?: string;
+  title?: string;
+  seconds?: number;
+}
+
+export interface Playbook {
+  id: number;
+  name: string;
+  description?: string;
+  trigger?: string;
+  steps: PlaybookStep[];
+  enabled?: number | boolean;
+  created_by?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface PlaybookStepResult {
+  step?: number;
+  type?: string;
+  name?: string;
+  ok?: boolean;
+  success?: boolean;
+  error?: string;
+  status?: string;
+  approval_id?: string;
+  detail?: string;
+  message?: string;
+}
+
+export interface PlaybookRunResult {
+  success?: boolean;
+  run_id?: string;
+  playbook_id?: number;
+  playbook_name?: string;
+  status?: string;
+  error?: string;
+  results?: PlaybookStepResult[];
+}
+
+export interface PlaybookApproval {
+  id: string;
+  playbookId: number;
+  stepIndex?: number;
+  title: string;
+  status: string;
+  userId?: number;
+  createdAt?: string;
+}
+
+export const playbookApi = {
+  /** 剧本列表（分页/启用过滤） */
+  list: (params?: { page?: number; pageSize?: number; enabled?: number | string }) =>
+    requestData<PageResult<Playbook>>({ method: 'GET', url: '/playbook/list', params }),
+  /** 剧本详情 */
+  detail: (id: number) => requestData<Playbook>({ method: 'GET', url: `/playbook/${id}` }),
+  /** 创建剧本（管理员） */
+  create: (data: { name: string; description?: string; trigger?: string; steps: PlaybookStep[]; enabled?: boolean }) =>
+    requestData<{ id: number; name: string; trigger: string }>({ method: 'POST', url: '/playbook/create', data }),
+  /** 更新剧本（管理员） */
+  update: (id: number, data: Partial<Playbook>) => requestData<null>({ method: 'PUT', url: `/playbook/${id}`, data }),
+  /** 删除剧本（管理员） */
+  remove: (id: number) => requestData<null>({ method: 'DELETE', url: `/playbook/${id}` }),
+  /** 执行剧本（body 携带触发事件） */
+  execute: (id: number, event: Record<string, unknown>) =>
+    requestData<PlaybookRunResult>({ method: 'POST', url: `/playbook/${id}/execute`, data: { event } }),
+  /** 待人工审批列表 */
+  pendingApprovals: () => requestData<PlaybookApproval[]>({ method: 'GET', url: '/playbook/approvals/pending' }),
+  /** 审批处理（approve/reject） */
+  confirmApproval: (id: string, decision: 'approve' | 'reject') =>
+    requestData<{ approval_id: string; status: string; title: string }>({
+      method: 'POST',
+      url: `/playbook/approvals/${id}`,
+      data: { decision }
+    }),
+  /** 导入剧本模板（管理员） */
+  seedTemplates: () => requestData<{ seeded: number }>({ method: 'POST', url: '/playbook/templates/seed' })
+};
+
+// ============ 系统配置 ============
+export interface ConfigItem {
+  id: number;
+  key: string;
+  value: string;
+  description?: string;
+  version?: number;
+  updated_by?: number;
+  updated_at?: string;
+}
+
+export interface ConfigBackupItem {
+  filename: string;
+  size: number;
+  created_at?: string;
+}
+
+export const configApi = {
+  /** 系统配置列表（sys_config 全量） */
+  list: () => requestData<ConfigItem[]>({ method: 'GET', url: '/config/list' }),
+  /** 更新配置值（管理员） */
+  update: (key: string, value: string) => requestData<null>({ method: 'PUT', url: `/config/${key}`, data: { value } }),
+  /** 备份文件列表（管理员） */
+  backups: () => requestData<ConfigBackupItem[]>({ method: 'GET', url: '/config/backups' }),
+  /** 立即备份（管理员） */
+  backup: () => requestData<{ filename: string; size: number }>({ method: 'POST', url: '/config/backup' }),
+  /** 恢复备份（管理员） */
+  restore: (filename: string) =>
+    requestData<{ restored_at?: string }>({ method: 'POST', url: '/config/restore', data: { filename } })
+};
