@@ -62,6 +62,54 @@ const adapters = {
     return { success: true, detail: `Webhook 已触发 ${url}` };
   },
 
+  siem_webhook: async (params) => {
+    const { url, token, username, password, headers = {}, action = 'soar_action', severity = 'medium', ip = '', detail = '', dry_run = false } = params;
+    if (!url) return { success: false, error: '缺少 url 参数' };
+    const { randomUUID } = require('crypto');
+    const event = {
+      event_id: `evt_${randomUUID().slice(0, 8)}`,
+      ts: new Date().toISOString(),
+      vendor: 'xuanjian',
+      product: 'xuanjian-security-agent',
+      action,
+      severity,
+      src_ip: ip,
+      device_type: 'siem',
+      raw: { detail },
+      message: detail || `${action} executed`
+    };
+    const authHeaders = {};
+    if (token) authHeaders.Authorization = `Bearer ${token}`;
+    if (username && password) authHeaders.Authorization = 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+    if (dry_run) {
+      const db = getDb();
+      db.prepare('INSERT INTO action_logs (policy_id, action_type, action_detail, result) VALUES (?, ?, ?, ?)')
+        .run(null, 'siem_webhook', `[dry-run] SIEM 推送 ${action}（${url}）`, 'success');
+      db.prepare('INSERT INTO audit_logs (user_id, username, operation_type, operation_target, operation_detail, result) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(null, 'agent', 'siem_push', url, JSON.stringify(event), 'dry_run');
+      return { success: true, detail: `[dry-run] SIEM 事件已模拟推送（${action}）`, dry_run: true, event };
+    }
+    const axios = require('axios');
+    let lastErr;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const resp = await axios.post(url, event, { headers: { 'Content-Type': 'application/json', ...authHeaders, ...headers }, timeout: 10000 });
+        const db = getDb();
+        db.prepare('INSERT INTO action_logs (policy_id, action_type, action_detail, result) VALUES (?, ?, ?, ?)')
+          .run(null, 'siem_webhook', `SIEM 推送 ${action}（${url}）HTTP ${resp.status}`, 'success');
+        return { success: true, detail: `SIEM 事件已推送（${url}）HTTP ${resp.status}`, event };
+      } catch (err) {
+        lastErr = err;
+      }
+    }
+    const db = getDb();
+    db.prepare('INSERT INTO action_logs (policy_id, action_type, action_detail, result) VALUES (?, ?, ?, ?)')
+      .run(null, 'siem_webhook', `SIEM 推送失败 ${action}（${url}）: ${lastErr.message}`, 'failed');
+    db.prepare('INSERT INTO audit_logs (user_id, username, operation_type, operation_target, operation_detail, result) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(null, 'agent', 'siem_push', url, lastErr.message, 'failed');
+    return { success: false, error: lastErr.message };
+  },
+
   log_only: async (params) => {
     logger.info(`[SOAR] 记录: ${params.message || '无内容'}`);
     return { success: true, detail: params.message || '已记录' };
