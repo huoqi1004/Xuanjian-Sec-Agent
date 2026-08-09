@@ -7,6 +7,7 @@ import Dialog from '@/components/ui/dialog';
 import { Table } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 import { useUserStore } from '@/stores/user';
+import PlaybookCanvas from '@/components/playbook-editor/PlaybookCanvas';
 
 const PAGE_SIZE = 10;
 
@@ -171,6 +172,8 @@ export default function Playbook() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<PlaybookForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [editMode, setEditMode] = useState<'canvas' | 'json'>('canvas');
+  const [canvasSteps, setCanvasSteps] = useState<PlaybookStep[]>([]);
 
   const [execVisible, setExecVisible] = useState(false);
   const [execTarget, setExecTarget] = useState<Playbook | null>(null);
@@ -217,18 +220,23 @@ export default function Playbook() {
   function openCreate() {
     setEditingId(null);
     setForm({ ...EMPTY_FORM });
+    setCanvasSteps(DEFAULT_STEPS);
+    setEditMode('canvas');
     setDialogOpen(true);
   }
 
   function openEdit(p: Playbook) {
+    const steps = Array.isArray(p.steps) ? p.steps : [];
     setEditingId(p.id);
     setForm({
       name: p.name,
       description: p.description || '',
       trigger: p.trigger || 'manual',
       enabled: isEnabled(p.enabled),
-      stepsJson: JSON.stringify(Array.isArray(p.steps) ? p.steps : [], null, 2)
+      stepsJson: JSON.stringify(steps, null, 2)
     });
+    setCanvasSteps(steps);
+    setEditMode('canvas');
     setDialogOpen(true);
   }
 
@@ -238,13 +246,18 @@ export default function Playbook() {
       return;
     }
     let steps: PlaybookStep[];
-    try {
-      const parsed: unknown = JSON.parse(form.stepsJson || '[]');
-      if (!Array.isArray(parsed)) throw new Error('steps must be array');
-      steps = parsed as PlaybookStep[];
-    } catch {
-      toast({ title: '步骤 JSON 格式错误，请检查', variant: 'error' });
-      return;
+    if (editMode === 'canvas') {
+      steps = canvasSteps;
+    } else {
+      try {
+        const parsed: unknown = JSON.parse(form.stepsJson || '[]');
+        if (!Array.isArray(parsed)) throw new Error('steps must be array');
+        steps = parsed as PlaybookStep[];
+        setCanvasSteps(steps); // sync canvas state
+      } catch {
+        toast({ title: '步骤 JSON 格式错误，请检查', variant: 'error' });
+        return;
+      }
     }
     const payload = {
       name: form.name.trim(),
@@ -516,17 +529,52 @@ export default function Playbook() {
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-400">步骤 JSON（数组，五项步骤类型）</label>
-            <textarea
-              className={`${fieldCls} w-full resize-none font-mono text-xs`}
-              rows={10}
-              value={form.stepsJson}
-              placeholder={STEP_PLACEHOLDER}
-              onChange={(e) => setForm({ ...form, stepsJson: e.target.value })}
-            />
-            <div className="mt-1 text-xs leading-5 text-gray-500">{STEP_TIP}</div>
+          <div className="flex items-center justify-between">
+            <label className="text-xs text-gray-400">执行步骤（拖拽编排）</label>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-gray-500">
+                {canvasSteps.length} 个步骤
+              </span>
+              <div className="flex rounded-md overflow-hidden border border-cyan-500/20">
+                <button
+                  type="button"
+                  onClick={() => setEditMode('canvas')}
+                  className={`px-2.5 py-0.5 text-xs transition-colors ${
+                    editMode === 'canvas'
+                      ? 'bg-cyan-500/20 text-cyan-300'
+                      : 'bg-[#1a2340] text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  画布
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditMode('json')}
+                  className={`px-2.5 py-0.5 text-xs transition-colors border-l border-cyan-500/20 ${
+                    editMode === 'json'
+                      ? 'bg-cyan-500/20 text-cyan-300'
+                      : 'bg-[#1a2340] text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  JSON
+                </button>
+              </div>
+            </div>
           </div>
+          {editMode === 'canvas' ? (
+            <PlaybookCanvas steps={canvasSteps} onChange={setCanvasSteps} />
+          ) : (
+            <div>
+              <textarea
+                className={`${fieldCls} w-full resize-none font-mono text-xs`}
+                rows={10}
+                value={form.stepsJson}
+                placeholder={STEP_PLACEHOLDER}
+                onChange={(e) => setForm({ ...form, stepsJson: e.target.value })}
+              />
+              <div className="mt-1 text-xs leading-5 text-gray-500">{STEP_TIP}</div>
+            </div>
+          )}
           <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-300">
             <input
               type="checkbox"

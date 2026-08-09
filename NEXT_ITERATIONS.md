@@ -16,7 +16,7 @@
 | N-04 | 扫描安全管控（CIDR 白名单 / 速率控制 / 审批） | P0 | Phase 2 | ✅ 已完成 |
 | N-05 | 前端工程化质量门禁（ESLint + Prettier） | P0 | Phase 0 | ✅ 已完成 |
 | N-06 | 数据库抽象层（MySQL 8/PG + DAO + 迁移） | P1 | Phase 3 | 待排期 |
-| N-07 | 任务队列全面接入（BullMQ / Redis） | P1 | Phase 3 | 待排期 |
+| N-07 | 任务队列全面接入（BullMQ / Redis） | P1 | Phase 3 | ✅ 已完成 |
 | N-08 | 可观测性增强（Grafana + OpenTelemetry + 失败率告警） | P1 | Phase 3 | 待排期 |
 | N-09 | 扫描 worker 容器化 + 协议扩展（UDP/ICMP/ARP） | P1 | Phase 2 | 待排期 |
 | N-10 | 时序数据接入与归档 | P1 | Phase 3 | 待排期 |
@@ -28,7 +28,7 @@
 | N-16 | 知识库管理后台（导入 / 更新 / 版本） | P1 | Phase 4 | 待排期 |
 | N-17 | Agent 工作台 UI（计划步骤展示 / 确认交互） | P1 | Phase 4 | 待排期 |
 | N-18 | 威胁情报源扩展 + IOC 失效回收 | P1 | Phase 2 | 待排期 |
-| N-19 | 拖拽式 SOAR 可视化编排 | P2 | Phase 5 | 待排期 |
+| N-19 | 拖拽式 SOAR 可视化编排 | P2 | Phase 5 | ✅ 已完成 |
 | N-20 | 领导视图数据大屏页 | P2 | Phase 5 | 待排期 |
 | N-21 | 报告统一模板引擎 | P2 | Phase 5 | 待排期 |
 | N-22 | 设备详情"检查执行"入口 UI | P2 | Phase 2 | 待排期 |
@@ -247,6 +247,16 @@
   - `siem_webhook`：标准 SIEM 事件推送（Bearer/Basic 鉴权 + 重试）；
   - `server/routes/adapters.js`：凭据 CRUD + 适配器目录接口；前端 Config 页新增"SOAR 适配器"区块（凭据管理）；
   - 全部动作双落审计（action_logs + audit_logs）；后端 Jest 132 用例全绿。
+
+### N-19 拖拽式 SOAR 可视化编排 ✅ 已完成（2026-08-09）
+- **现状**：Playbook 引擎完备，前端为步骤 JSON 编辑。
+- **目标**：拖拽画布（条件/动作/审批/通知/等待节点连线），保存为剧本 JSON 落地。
+- **涉及**：`frontend-react/src/components/playbook-editor/PlaybookCanvas.tsx`、`frontend-react/src/pages/Playbook.tsx`。
+- **验收**：非技术用户可拖拽生成可执行剧本。
+- **实现**：
+  - `frontend-react/src/components/playbook-editor/PlaybookCanvas.tsx`（新建）：基于 `@xyflow/react` 的拖拽画布，支持 5 种节点类型（condition/action/notification/approval/wait），左工具栏点击添加节点、中间画布拖拽调整位置、右属性面板编辑参数（JSON 参数区支持 `{{字段}}` 模板引用）；节点上下 Handle 支持手动连线；画布与 JSON 编辑器双向同步；
+  - `frontend-react/src/pages/Playbook.tsx`（修改）：新建/编辑弹窗新增"画布/JSON"模式切换；画布模式下由 PlaybookCanvas 渲染步骤，保存时取 `canvasSteps` 数组；JSON 模式保留原 textarea 作为高级用户入口；
+  - 构建产物：chunk 1,299 KB（gzip 410 KB），lint 0 errors，Vite build 通过；后端 Jest 141 用例全绿。
 
 ---
 
