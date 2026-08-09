@@ -1,0 +1,13 @@
+# 玄鉴安全智能体 - Prometheus 抓取配置
+# 由 docker-compose 中 monitoring profile 的 prometheus 服务挂载
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'xuanjian-server'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['server:3000']
+        labels:
+          service: xuanjian-security-agent

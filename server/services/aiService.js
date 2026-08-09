@@ -500,6 +500,7 @@ async function callDeepSeek(messages, options = {}) {
     const response = await deepseekClient.post('/chat/completions', requestBody);
     return { success: true, data: response.data };
   } catch (err) {
+    metrics.inc('ai_calls_failed_total', { provider: 'deepseek' }, 1, 'AI 调用失败次数');
     logger.error('DeepSeek API 调用失败:', err.response?.data || err.message);
     return { success: false, error: err.response?.data?.error?.message || err.message };
   }
@@ -758,6 +759,7 @@ async function callAiServiceFileDetection(endpoint, filePath) {
     });
     return resp.data || null;
   } catch (err) {
+    metrics.inc('ai_calls_failed_total', { provider: 'python' }, 1, 'AI 调用失败次数');
     logger.warn(`[AI服务] 调用 ${endpoint} 失败: ${err.message}`);
     return null;
   }

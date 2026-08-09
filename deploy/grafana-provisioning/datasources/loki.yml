@@ -1,0 +1,13 @@
+# Grafana - Loki 数据源配置（自动 provisioning）
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    uid: loki
+    editable: true
+    jsonData:
+      maxLines: 1000

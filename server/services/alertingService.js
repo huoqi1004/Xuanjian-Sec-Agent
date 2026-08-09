@@ -95,10 +95,21 @@ async function checkSystemHealth() {
     upsertSystemAlert(db(), 'task-queue', 'warning', 0.7, `系统健康: 任务队列积压 ${queueStats.depth}`);
   }
 
+  // 4. AI 调用失败率
+  const aiTotal = metrics.get('ai_calls_total', { provider: 'deepseek' });
+  const aiFailed = metrics.get('ai_calls_failed_total', { provider: 'deepseek' });
+  const failRate = aiTotal > 0 ? aiFailed / aiTotal : 0;
+  metrics.setGauge('ai_call_failure_rate', {}, failRate, 'AI 调用失败率');
+  const failRateOk = aiTotal === 0 || failRate < (parseFloat(process.env.AI_FAILURE_RATE_THRESHOLD) || 0.5);
+  checks.push({ name: 'ai_failure_rate', ok: failRateOk, detail: `失败率 ${(failRate * 100).toFixed(1)}% (${aiFailed}/${aiTotal})` });
+  if (!failRateOk) {
+    upsertSystemAlert(db(), 'ai-service', 'warning', 0.8, `系统健康: AI 调用失败率 ${(failRate * 100).toFixed(1)}% 超过阈值`);
+  }
+
   lastCheck.ts = new Date().toISOString();
   lastCheck.checks = checks;
 
-  if (!ai.ok || !memOk || !queueOk) {
+  if (!ai.ok || !memOk || !queueOk || !failRateOk) {
     logger.warn(`[健康巡检] 存在异常项: ${checks.filter((c) => !c.ok).map((c) => c.name).join(', ')}`);
   }
   return { ts: lastCheck.ts, checks };

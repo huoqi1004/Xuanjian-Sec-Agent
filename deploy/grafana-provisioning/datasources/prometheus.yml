@@ -1,0 +1,13 @@
+# Grafana - Prometheus 数据源配置（自动 provisioning）
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    uid: prometheus
+    editable: true
+    jsonData:
+      timeInterval: 15s

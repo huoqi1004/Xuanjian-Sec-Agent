@@ -52,6 +52,18 @@ function incGauge(name, labels = {}, delta = 1, help = '', opts = {}) {
 }
 
 /**
+ * 读取指定指标（counter/gauge）当前值，按标签取数；未注册或不存在时返回 0。
+ * 兼容无标签指标（labels 为空对象）与带标签指标，如 get('ai_calls_total', { provider: 'deepseek' })。
+ */
+function get(name, labels = {}) {
+  const entry = registry.get(name);
+  if (!entry) return 0;
+  if (entry.type !== 'counter' && entry.type !== 'gauge') return 0;
+  const key = labelsKey(labels);
+  return entry.values.get(key) || 0;
+}
+
+/**
  * Histogram 观测值（输出 _sum/_count/_bucket，Prometheus 直方图格式）
  */
 function observe(name, labels = {}, value = 0, help = '', opts = {}) {
@@ -127,4 +139,4 @@ function render() {
   return lines.join('\n') + '\n';
 }
 
-module.exports = { inc, setGauge, incGauge, observe, render, registry };
+module.exports = { inc, setGauge, incGauge, observe, get, render, registry };
