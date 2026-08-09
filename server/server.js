@@ -82,10 +82,14 @@ async function startServer(options = {}) {
     app.use('/api/', limiter);
 
     // 上传目录不再对外公开托管，避免上传的敏感/恶意文件被匿名访问
-    // 静态资源优先使用新前端构建产物（frontend-app/dist），缺失时回退旧版 frontend/
+    // 静态资源优先使用 React 构建产物（frontend-react/dist），缺失时回退 frontend-app/dist，再回退旧版 frontend/
+    const envFrontend = process.env.FRONTEND_DIR; // 显式指定前端目录
+    const reactDist = path.join(__dirname, '../frontend-react/dist');
     const frontendDist = path.join(__dirname, '../frontend-app/dist');
     const legacyFrontend = path.join(__dirname, '../frontend');
-    const staticDir = require('fs').existsSync(frontendDist) ? frontendDist : legacyFrontend;
+    const staticDir = envFrontend
+      ? path.resolve(process.cwd(), envFrontend)
+      : [reactDist, frontendDist, legacyFrontend].find((d) => require('fs').existsSync(d));
     logger.info(`前端静态目录: ${staticDir}`);
     app.use(express.static(staticDir));
 
