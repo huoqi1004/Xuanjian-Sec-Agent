@@ -107,6 +107,7 @@ async function startServer(options = {}) {
     const intelRoutes = require('./routes/intel');
     const reportsRoutes = require('./routes/reports');
     const playbookRoutes = require('./routes/playbook');
+    const adaptersRoutes = require('./routes/adapters');
 
     app.use('/api/auth', authRoutes);
     app.use('/api/scan', scanRoutes);
@@ -122,6 +123,7 @@ async function startServer(options = {}) {
     app.use('/api/intel', intelRoutes);
     app.use('/api/reports', reportsRoutes);
     app.use('/api/playbook', playbookRoutes);
+    app.use('/api/adapters', adaptersRoutes);
 
     app.get('/api/health', (req, res) => {
       const db = getDb();

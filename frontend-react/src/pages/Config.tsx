@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { configApi } from '@/api';
-import type { ConfigBackupItem, ConfigItem } from '@/api';
+import { adapterApi, configApi } from '@/api';
+import type { AdapterInfo, ConfigBackupItem, ConfigItem, CredentialItem } from '@/api';
+import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 import Dialog from '@/components/ui/dialog';
 import { Table } from '@/components/ui/table';
@@ -18,6 +19,66 @@ function formatSize(bytes?: number): string {
   return (bytes / 1024).toFixed(1) + ' KB';
 }
 
+// ============ SOAR 适配器 ============
+const PROVIDER_OPTIONS = [
+  { value: 'switch', label: '交换机 (switch)' },
+  { value: 'aliyun', label: '阿里云 (aliyun)' },
+  { value: 'tencent', label: '腾讯云 (tencent)' }
+];
+
+interface FieldSpec {
+  key: string;
+  label: string;
+  secret?: boolean;
+}
+
+const FIELD_TEMPLATES: Record<string, FieldSpec[]> = {
+  switch: [
+    { key: 'username', label: '用户名' },
+    { key: 'password', label: '密码', secret: true },
+    { key: 'host', label: '交换机地址' }
+  ],
+  aliyun: [
+    { key: 'accessKeyId', label: 'AccessKey ID' },
+    { key: 'accessKeySecret', label: 'AccessKey Secret', secret: true }
+  ],
+  tencent: [
+    { key: 'secretId', label: 'SecretId' },
+    { key: 'secretKey', label: 'SecretKey', secret: true }
+  ]
+};
+
+const META_DEFAULTS: Record<string, string> = {
+  switch: JSON.stringify({ port: 22, vendor: 'huawei' }, null, 2),
+  aliyun: JSON.stringify({ region: 'cn-hangzhou', endpoint: 'ecs.aliyuncs.com', securityGroupId: '' }, null, 2),
+  tencent: JSON.stringify({ region: 'ap-guangzhou', securityGroupId: '' }, null, 2)
+};
+
+const META_HINTS: Record<string, string> = {
+  switch: '可选：port（端口）、vendor（huawei/h3c/cisco）',
+  aliyun: '可选：region（地域）、endpoint、securityGroupId（安全组 ID）',
+  tencent: '可选：region（地域）、securityGroupId（安全组 ID）'
+};
+
+function riskVariant(risk: string): 'default' | 'success' | 'warning' | 'danger' {
+  if (risk === 'high') return 'danger';
+  if (risk === 'medium') return 'warning';
+  if (risk === 'low') return 'success';
+  return 'default';
+}
+
+function formatMeta(meta?: Record<string, unknown>): string {
+  if (!meta || Object.keys(meta).length === 0) return '-';
+  return Object.entries(meta)
+    .map(([k, v]) => `${k}=${v ?? ''}`)
+    .join(' ');
+}
+
+function formatFields(fields?: Record<string, string>): string {
+  if (!fields || Object.keys(fields).length === 0) return '-';
+  return Object.keys(fields).map((k) => `${k}:***`).join(' ');
+}
+
 export default function Config() {
   const { toast } = useToast();
 
@@ -32,6 +93,20 @@ export default function Config() {
 
   const [restoreTarget, setRestoreTarget] = useState<ConfigBackupItem | null>(null);
   const [restoring, setRestoring] = useState(false);
+
+  const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
+  const [creds, setCreds] = useState<CredentialItem[]>([]);
+  const [credLoading, setCredLoading] = useState(false);
+
+  const [credOpen, setCredOpen] = useState(false);
+  const [credProvider, setCredProvider] = useState('switch');
+  const [credName, setCredName] = useState('');
+  const [credFields, setCredFields] = useState<Record<string, string>>({});
+  const [credMeta, setCredMeta] = useState(META_DEFAULTS.switch);
+  const [credSaving, setCredSaving] = useState(false);
+
+  const [deleteTarget, setDeleteTarget] = useState<CredentialItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadConfigs() {
     setLoading(true);
@@ -54,6 +129,8 @@ export default function Config() {
   useEffect(() => {
     loadConfigs();
     loadBackups();
+    loadAdapters();
+    loadCreds();
   }, []);
 
   function openEdit(item: ConfigItem) {
@@ -99,6 +176,78 @@ export default function Config() {
       // http 拦截器已提示
     }
     setRestoring(false);
+  }
+
+  async function loadAdapters() {
+    try {
+      setAdapters((await adapterApi.list()) || []);
+    } catch {
+      setAdapters([]);
+    }
+  }
+
+  async function loadCreds() {
+    setCredLoading(true);
+    try {
+      setCreds((await adapterApi.credentials()) || []);
+    } catch {
+      setCreds([]);
+    }
+    setCredLoading(false);
+  }
+
+  function openCreateCred() {
+    setCredProvider('switch');
+    setCredName('');
+    setCredFields({});
+    setCredMeta(META_DEFAULTS.switch);
+    setCredOpen(true);
+  }
+
+  function changeProvider(provider: string) {
+    setCredProvider(provider);
+    setCredFields({});
+    setCredMeta(META_DEFAULTS[provider] || '{}');
+  }
+
+  async function saveCred() {
+    if (!credName.trim()) {
+      toast({ title: '请输入凭据名称', variant: 'warning' });
+      return;
+    }
+    let meta: Record<string, unknown> | undefined;
+    if (credMeta.trim()) {
+      try {
+        meta = JSON.parse(credMeta) as Record<string, unknown>;
+      } catch {
+        toast({ title: 'meta 需为合法 JSON', variant: 'error' });
+        return;
+      }
+    }
+    setCredSaving(true);
+    try {
+      await adapterApi.saveCredential({ provider: credProvider, name: credName.trim(), fields: credFields, meta });
+      toast({ title: '凭据已保存', variant: 'success' });
+      setCredOpen(false);
+      loadCreds();
+    } catch {
+      // http 拦截器已提示
+    }
+    setCredSaving(false);
+  }
+
+  async function confirmDeleteCred() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await adapterApi.deleteCredential(deleteTarget.provider, deleteTarget.name);
+      toast({ title: '凭据已删除', variant: 'success' });
+      setDeleteTarget(null);
+      loadCreds();
+    } catch {
+      // http 拦截器已提示
+    }
+    setDeleting(false);
   }
 
   return (
@@ -211,6 +360,117 @@ export default function Config() {
         </Table>
       </div>
 
+      {/* SOAR 适配器 */}
+      <div className="rounded-lg border border-cyan-500/20 bg-[#16213e]/80 p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-cyan-300">SOAR 适配器</h3>
+            <p className="mt-0.5 text-xs text-gray-500">
+              凭据经 AES-256-GCM 加密存储于服务端，前端仅回显 ***
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                loadAdapters();
+                loadCreds();
+              }}
+            >
+              刷新
+            </Button>
+            <Button size="sm" onClick={openCreateCred}>
+              新建凭据
+            </Button>
+          </div>
+        </div>
+
+        {/* 适配器目录 */}
+        <h4 className="mb-2 text-xs font-semibold text-cyan-200/70">适配器目录</h4>
+        <Table>
+          <thead>
+            <tr className="border-b border-cyan-500/20 text-left text-xs text-cyan-200/70">
+              <th className="px-2 py-2 font-medium">类型</th>
+              <th className="px-2 py-2 font-medium">名称</th>
+              <th className="px-2 py-2 font-medium">凭据 Provider</th>
+              <th className="px-2 py-2 font-medium">风险</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {adapters.map((a) => (
+              <tr key={a.type} className="hover:bg-white/5">
+                <td className="px-2 py-2 font-mono text-xs text-cyan-300">{a.type}</td>
+                <td className="px-2 py-2 text-gray-300">{a.name}</td>
+                <td className="px-2 py-2 text-gray-400">{a.provider || '-'}</td>
+                <td className="px-2 py-2">
+                  <Badge variant={riskVariant(a.risk)}>{a.risk}</Badge>
+                </td>
+              </tr>
+            ))}
+            {adapters.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-2 py-6 text-center text-gray-500">
+                  加载中…
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+
+        {/* 凭据管理 */}
+        <h4 className="mb-2 mt-5 text-xs font-semibold text-cyan-200/70">凭据管理</h4>
+        <Table>
+          <thead>
+            <tr className="border-b border-cyan-500/20 text-left text-xs text-cyan-200/70">
+              <th className="px-2 py-2 font-medium">Provider</th>
+              <th className="px-2 py-2 font-medium">名称</th>
+              <th className="px-2 py-2 font-medium">Meta</th>
+              <th className="px-2 py-2 font-medium">字段（脱敏）</th>
+              <th className="px-2 py-2 font-medium">更新时间</th>
+              <th className="px-2 py-2 font-medium">操作</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {creds.map((c) => (
+              <tr key={`${c.provider}:${c.name}`} className="hover:bg-white/5">
+                <td className="px-2 py-2 text-xs text-cyan-300">{c.provider}</td>
+                <td className="px-2 py-2 text-gray-300">{c.name}</td>
+                <td
+                  className="max-w-[220px] truncate px-2 py-2 font-mono text-xs text-gray-400"
+                  title={formatMeta(c.meta)}
+                >
+                  {formatMeta(c.meta)}
+                </td>
+                <td
+                  className="max-w-[200px] truncate px-2 py-2 font-mono text-xs text-gray-400"
+                  title={formatFields(c.fields)}
+                >
+                  {formatFields(c.fields)}
+                </td>
+                <td className="px-2 py-2 text-gray-400">{formatTime(c.updatedAt)}</td>
+                <td className="px-2 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteTarget(c)}
+                    className="text-xs text-red-400 transition-colors hover:text-red-300"
+                  >
+                    删除
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {creds.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-2 py-6 text-center text-gray-500">
+                  {credLoading ? '加载中…' : '暂无凭据'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </Table>
+      </div>
+
       {/* 编辑配置弹窗 */}
       <Dialog
         open={!!editTarget}
@@ -242,6 +502,90 @@ export default function Config() {
             />
           </div>
           <p className="text-xs leading-5 text-gray-500">{editTarget?.description || ''}</p>
+        </div>
+      </Dialog>
+
+      {/* 新建凭据弹窗 */}
+      <Dialog
+        open={credOpen}
+        onOpenChange={(open) => !open && setCredOpen(false)}
+        title="新建适配器凭据"
+        footer={
+          <>
+            <Button size="sm" variant="outline" onClick={() => setCredOpen(false)}>
+              取消
+            </Button>
+            <Button size="sm" disabled={credSaving} onClick={saveCred}>
+              {credSaving ? '保存中…' : '保存'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">Provider</label>
+            <select
+              className={`${fieldCls} w-full`}
+              value={credProvider}
+              onChange={(e) => changeProvider(e.target.value)}
+            >
+              {PROVIDER_OPTIONS.map((p) => (
+                <option key={p.value} value={p.value} className="bg-[#16213e]">
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">名称</label>
+            <input
+              className={`${fieldCls} w-full`}
+              value={credName}
+              onChange={(e) => setCredName(e.target.value)}
+              placeholder="如：核心交换机、华东生产环境"
+            />
+          </div>
+          {(FIELD_TEMPLATES[credProvider] || []).map((f) => (
+            <div key={f.key}>
+              <label className="mb-1 block text-xs text-gray-400">{f.label}</label>
+              <input
+                className={`${fieldCls} w-full font-mono`}
+                type={f.secret ? 'password' : 'text'}
+                value={credFields[f.key] || ''}
+                onChange={(e) => setCredFields((prev) => ({ ...prev, [f.key]: e.target.value }))}
+                placeholder={f.secret ? '••••••••' : ''}
+                autoComplete="off"
+              />
+            </div>
+          ))}
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">Meta（JSON，可选）</label>
+            <textarea
+              className={`${fieldCls} w-full resize-none font-mono text-xs`}
+              rows={4}
+              value={credMeta}
+              onChange={(e) => setCredMeta(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-500">{META_HINTS[credProvider]}</p>
+          </div>
+          <p className="text-xs leading-5 text-gray-500">
+            明文密钥仅在保存时传输，服务端以 AES-256-GCM 加密存储；列表中一律回显 ***。
+          </p>
+        </div>
+      </Dialog>
+
+      {/* 删除凭据确认 */}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)} title="确认删除凭据">
+        <p className="text-sm text-gray-600">
+          确定要删除凭据 {deleteTarget?.provider}/{deleteTarget?.name} 吗？删除后相关适配器将无法使用该凭据。
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={() => setDeleteTarget(null)}>
+            取消
+          </Button>
+          <Button size="sm" variant="destructive" disabled={deleting} onClick={confirmDeleteCred}>
+            {deleting ? '删除中…' : '删除'}
+          </Button>
         </div>
       </Dialog>
 

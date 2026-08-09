@@ -843,3 +843,36 @@ export const configApi = {
   restore: (filename: string) =>
     requestData<{ restored_at?: string }>({ method: 'POST', url: '/config/restore', data: { filename } })
 };
+
+// ============ SOAR 适配器 ============
+export interface AdapterInfo {
+  type: string;
+  name: string;
+  provider: string;
+  risk: string;
+}
+
+export interface CredentialItem {
+  provider: string;
+  name: string;
+  fields: Record<string, string>;
+  meta: Record<string, unknown>;
+  updatedAt?: string;
+}
+
+export const adapterApi = {
+  /** 适配器目录 */
+  list: () => requestData<AdapterInfo[]>({ method: 'GET', url: '/adapters/list' }),
+  /** 凭据列表（敏感字段已脱敏为 ***） */
+  credentials: () => requestData<CredentialItem[]>({ method: 'GET', url: '/adapters/credentials' }),
+  /** 保存凭据（明文密钥仅在请求中传输，服务端加密存储） */
+  saveCredential: (data: {
+    provider: string;
+    name: string;
+    fields: Record<string, string>;
+    meta?: Record<string, unknown>;
+  }) => requestData<{ key: string }>({ method: 'PUT', url: '/adapters/credentials', data }),
+  /** 删除凭据 */
+  deleteCredential: (provider: string, name: string) =>
+    requestData<{ ok: boolean }>({ method: 'DELETE', url: '/adapters/credentials', data: { provider, name } })
+};
