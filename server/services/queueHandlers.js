@@ -37,6 +37,20 @@ function registerHandlers(queue = getQueue()) {
     await defenseService.executePolicyActions(policy, facts);
     return { executed: true };
   });
+
+  // 剧本执行（N-07 Task B）：执行剧本步骤循环
+  // approval 步骤挂起时 _executeSteps 返回 { status: 'awaiting_approval', results: [{ approval_id }] }；
+  // 审批通过后由 playbookService 重新入队（fromApproval: true）继续剩余步骤。
+  queue.process('playbook_run', async (job) => {
+    const playbookService = require('./playbookService');
+    const { playbookId, event, userId, fromApproval, runId, startIndex } = job.data;
+    return playbookService._executeSteps(playbookId, event, {
+      userId,
+      fromApproval,
+      runId,
+      startIndex
+    });
+  });
 }
 
 // 模块加载即注册到当前队列单例（server.js 启动时 require 本模块即完成接入）

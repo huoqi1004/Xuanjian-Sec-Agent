@@ -183,10 +183,21 @@ function seedTemplates() {
 
 /**
  * 执行剧本
+ * 默认将执行任务入队（playbook_run 队列），由处理器异步执行步骤循环，返回 { queued: true, run_id }；
+ * 传 opts.sync = true 时同步执行（测试/内部使用），返回完整执行结果。
  * @param {number} playbookId
  * @param {object} event 触发事件上下文（{ ip, severity, confidence, fail_count, asset, ... }）
+ * @param {number|object} userId 用户 ID（旧签名），或 opts 对象 { userId, sync, tenant }
+ * @param {string} tenant
+ * @param {object} opts { sync }
  */
-async function execute(playbookId, event = {}, userId = 1, tenant) {
+async function execute(playbookId, event = {}, userId = 1, tenant, opts = {}) {
+  // 兼容：第 3 参数可为旧式数字 userId，也可为 opts 对象（新调用方传 { userId, sync, tenant }）
+  if (userId && typeof userId === 'object') {
+    opts = userId;
+    userId = opts.userId || 1;
+    tenant = opts.tenant || tenant;
+  }
   const db = getDb();
   const playbook = db.prepare('SELECT * FROM playbooks WHERE id = ?').get(playbookId);
   if (!playbook) return { success: false, error: '剧本不存在' };
@@ -195,15 +206,46 @@ async function execute(playbookId, event = {}, userId = 1, tenant) {
     return { success: false, error: '无权访问该剧本' };
   }
   if (!Number(playbook.enabled)) return { success: false, error: '剧本未启用' };
+  const steps = _parseSteps(playbook);
+  if (steps.length === 0) return { success: false, error: '剧本步骤为空' };
+
+  // 同步执行（测试/内部使用）
+  if (opts.sync) {
+    return _executeSteps(playbookId, event, { userId, fromApproval: false });
+  }
+
+  // 默认异步：入队 playbook_run，由处理器执行步骤循环
+  const runId = `run_${randomUUID().slice(0, 8)}`;
+  const { getQueue } = require('./queue');
+  await getQueue().add('playbook_run', { playbookId, event, userId, fromApproval: false, runId }, { attempts: 1 });
+  metrics.inc('soar_runs_total', { trigger: playbook.trigger, status: 'queued' }, 1, 'SOAR 剧本执行次数');
+  logger.info(`[SOAR] 剧本「${playbook.name}」执行任务已入队（run=${runId}）`);
+  return { success: true, queued: true, run_id: runId, playbook_id: playbook.id, playbook_name: playbook.name };
+}
+
+/**
+ * 剧本步骤执行循环（playbook_run 处理器与同步执行共用）
+ * @param {number} playbookId
+ * @param {object} event 触发事件上下文
+ * @param {object} opts { userId, fromApproval, startIndex, runId }
+ */
+async function _executeSteps(playbookId, event = {}, opts = {}) {
+  const { userId = 1, fromApproval = false, startIndex = 0, runId } = opts;
+  const db = getDb();
+  const playbook = db.prepare('SELECT * FROM playbooks WHERE id = ?').get(playbookId);
+  if (!playbook) return { success: false, error: '剧本不存在' };
 
   const steps = _parseSteps(playbook);
   if (steps.length === 0) return { success: false, error: '剧本步骤为空' };
 
-  const runId = `run_${randomUUID().slice(0, 8)}`;
+  const finalRunId = runId || `run_${randomUUID().slice(0, 8)}`;
+  // 审批续跑：携带审批人上下文
+  if (fromApproval && !event.approved_by) event = { ...event, approved_by: userId };
+
   const results = [];
   let status = 'completed';
 
-  for (let i = 0; i < steps.length; i++) {
+  for (let i = startIndex; i < steps.length; i++) {
     const step = steps[i];
     try {
       if (step.type === 'condition') {
@@ -242,10 +284,10 @@ async function execute(playbookId, event = {}, userId = 1, tenant) {
     }
   }
 
-  _logRun(playbook, runId, status, results.length, userId);
+  _logRun(playbook, finalRunId, status, results.length, userId);
   metrics.inc('soar_runs_total', { trigger: playbook.trigger, status }, 1, 'SOAR 剧本执行次数');
-  logger.info(`[SOAR] 剧本「${playbook.name}」执行完成（run=${runId}），状态=${status}`);
-  return { success: true, run_id: runId, playbook_id: playbook.id, playbook_name: playbook.name, status, results };
+  logger.info(`[SOAR] 剧本「${playbook.name}」执行完成（run=${finalRunId}），状态=${status}`);
+  return { success: true, run_id: finalRunId, playbook_id: playbook.id, playbook_name: playbook.name, status, results };
 }
 
 function _logRun(playbook, runId, status, stepCount, userId) {
@@ -304,27 +346,18 @@ async function _continueAfterApproval(approval, reviewerId) {
     const db = getDb();
     const playbook = db.prepare('SELECT * FROM playbooks WHERE id = ?').get(approval.playbookId);
     if (!playbook) return;
-    const steps = _parseSteps(playbook);
-    const event = { approved_by: reviewerId };
-    const results = [];
-    let status = 'completed';
-    for (let i = approval.stepIndex + 1; i < steps.length; i++) {
-      const step = steps[i];
-      if (step.type === 'action') {
-        const r = await runAction(step.action, replaceTokens(step.params, event));
-        results.push({ step: i, type: 'action', name: step.name || step.action, ...r });
-        if (!r.success) { status = 'failed'; break; }
-      } else if (step.type === 'notification') {
-        await notifyService.send({ channel: step.channel || 'all', message: step.message || '审批通过后通知', severity: 'medium' });
-        results.push({ step: i, type: 'notification', name: step.name, success: true });
-      } else if (step.type === 'wait') {
-        await sleep((Number(step.seconds) || 1) * 1000);
-      }
-    }
-    _logRun(playbook, `run_${approval.id}`, status, results.length, reviewerId);
-    logger.info(`[SOAR] 审批通过后续执行完成（approval=${approval.id}），状态=${status}`);
+    // 审批通过：将剩余步骤重新入队 playbook_run，由处理器继续执行（fromApproval: true）
+    const { getQueue } = require('./queue');
+    await getQueue().add('playbook_run', {
+      playbookId: approval.playbookId,
+      event: { approved_by: reviewerId },
+      userId: reviewerId,
+      fromApproval: true,
+      startIndex: approval.stepIndex + 1
+    }, { attempts: 1 });
+    logger.info(`[SOAR] 审批通过，剧本续跑任务已入队（approval=${approval.id}，playbook=${approval.playbookId}）`);
   } catch (err) {
-    logger.error(`[SOAR] 审批后续执行失败: ${err.message}`);
+    logger.error(`[SOAR] 审批后续执行入队失败: ${err.message}`);
   }
 }
 
@@ -337,6 +370,7 @@ module.exports = {
   deletePlaybook,
   seedTemplates,
   execute,
+  _executeSteps,
   getPendingApprovals,
   confirmApproval,
   evaluateCondition,

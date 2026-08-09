@@ -61,6 +61,8 @@ class MemoryQueue extends EventEmitter {
     };
     this.jobs.set(id, job);
     this.emit('added', job);
+    // N-07 队列可观测：任务进入队列等待（含 delay 分支，统一在入队时 +1，任务离开队列时 -1）
+    metrics.incGauge('queue_waiting', { queue: name }, 1, '队列等待数');
 
     if (opts.delay) {
       setTimeout(() => {
@@ -99,6 +101,7 @@ class MemoryQueue extends EventEmitter {
       this.failedCount++;
       metrics.inc('queue_jobs_total', { queue: job.name, result: 'failed' }, 1, '队列任务总数');
       metrics.incGauge('queue_active_jobs', { queue: job.name }, -1, '队列活跃任务数');
+      metrics.incGauge('queue_waiting', { queue: job.name }, -1, '队列等待数');
       this.emit('failed', job);
       this.emit(`failed:${job.name}`, job);
       this._drain();
@@ -113,6 +116,7 @@ class MemoryQueue extends EventEmitter {
       this.completedCount++;
       metrics.inc('queue_jobs_total', { queue: job.name, result: 'completed' }, 1, '队列任务总数');
       metrics.incGauge('queue_active_jobs', { queue: job.name }, -1, '队列活跃任务数');
+      metrics.incGauge('queue_waiting', { queue: job.name }, -1, '队列等待数');
       this.emit('completed', job);
       this.emit(`completed:${job.name}`, job);
       this._drain(); // 任务完成，调度下一个等待任务
@@ -125,6 +129,8 @@ class MemoryQueue extends EventEmitter {
       if (job.attempts < job.maxAttempts) {
         const delay = (job.opts.backoff || 1000) * Math.pow(2, job.attempts - 1);
         job.status = 'delayed';
+        // N-07 队列可观测：记录重试次数（任务仍留在队列中，不调整等待深度）
+        metrics.inc('queue_retries_total', { queue: job.name }, 1, '队列重试次数');
         logger.warn(`[队列] 任务 ${job.id} 第 ${job.attempts} 次执行失败，${delay}ms 后重试: ${job.error}`);
         setTimeout(() => {
           if (job.status !== 'delayed') return;
@@ -137,6 +143,7 @@ class MemoryQueue extends EventEmitter {
         job.completedAt = new Date().toISOString();
         this.failedCount++;
         metrics.inc('queue_jobs_total', { queue: job.name, result: 'failed' }, 1, '队列任务总数');
+        metrics.incGauge('queue_waiting', { queue: job.name }, -1, '队列等待数');
         logger.error(`[队列] 任务 ${job.id} 最终失败: ${job.error}`);
         this.emit('failed', job);
         this.emit(`failed:${job.name}`, job);

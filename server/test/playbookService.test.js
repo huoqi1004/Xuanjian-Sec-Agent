@@ -1,5 +1,7 @@
 const { getDb, resetForTest, closeDb } = require('../db/database');
 const playbookService = require('../services/playbookService');
+// N-07 Task B：注册 playbook_run 处理器（审批续跑现在通过队列入队执行，需有处理器可消费）
+require('../services/queueHandlers');
 
 describe('SOAR 剧本引擎（playbookService）', () => {
   beforeEach(() => {
@@ -46,7 +48,7 @@ describe('SOAR 剧本引擎（playbookService）', () => {
       ]
     }, 1);
 
-    const result = await playbookService.execute(id, { ip: '10.0.0.66', fail_count: 9 }, 1);
+    const result = await playbookService.execute(id, { ip: '10.0.0.66', fail_count: 9 }, { sync: true });
     expect(result.success).toBe(true);
     expect(result.status).toBe('completed');
     expect(result.results[0].ok).toBe(true);
@@ -70,7 +72,7 @@ describe('SOAR 剧本引擎（playbookService）', () => {
       ]
     }, 1);
 
-    const result = await playbookService.execute(id, { fail_count: 2 }, 1);
+    const result = await playbookService.execute(id, { fail_count: 2 }, { sync: true });
     expect(result.status).toBe('skipped');
     expect(result.results[0].ok).toBe(false);
     expect(db.prepare("SELECT * FROM action_logs WHERE action_type = 'firewall_block'").all().length).toBe(0);
@@ -86,7 +88,7 @@ describe('SOAR 剧本引擎（playbookService）', () => {
       ]
     }, 1);
 
-    const result = await playbookService.execute(id, {}, 1);
+    const result = await playbookService.execute(id, {}, { sync: true });
     expect(result.status).toBe('awaiting_approval');
     const approvalId = result.results[0].approval_id;
 
@@ -117,7 +119,7 @@ describe('SOAR 剧本引擎（playbookService）', () => {
         { type: 'action', action: 'log_only', params: { message: '不应执行' } }
       ]
     }, 1);
-    const result = await playbookService.execute(id, {}, 1);
+    const result = await playbookService.execute(id, {}, { sync: true });
     const approvalId = result.results[0].approval_id;
 
     const rejected = await playbookService.confirmApproval(approvalId, 'reject', 1);

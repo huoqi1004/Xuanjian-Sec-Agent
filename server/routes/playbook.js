@@ -69,7 +69,8 @@ router.post('/:id/execute', checkPermission('POST'), auditLog('playbook_execute'
   const { event = {} } = req.body;
   const result = await playbookService.execute(parseInt(req.params.id), event, req.user?.id || 1, req.tenant);
   if (!result.success) return fail(res, result.error);
-  return success(res, result, '剧本执行完成');
+  // N-07 Task B：execute 默认入队，data 为 { queued: true, run_id, ... }
+  return success(res, result, result.queued ? '剧本执行任务已入队' : '剧本执行完成');
 }));
 
 /**
