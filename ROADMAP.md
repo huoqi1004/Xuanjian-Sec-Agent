@@ -307,7 +307,7 @@ Phase 5（P2）商业化与产品化
   - [ ] 情报采集/报告生成/防御动作入队（待接入）
 - [x] 指标：Prometheus 文本格式 `/metrics` 端点（`server/utils/metrics.js` 轻量实现）
   - HTTP 请求数/状态码/耗时直方图、AI 调用量（`ai_calls_total`）、队列深度、DB 行数、WS 连接数、进程/系统指标
-  - [ ] Grafana 看板（依赖部署，待排期）
+  - [x] Grafana 看板（依赖部署，N-08，2026-08-09，docker-compose monitoring profile 含 Prometheus+Grafana+Loki）
 - [x] 结构化日志：`LOG_FORMAT=json` 输出 JSON 日志（Loki/ELK 可采集），支持 `child({traceId})` 上下文
 - [x] 链路追踪：请求级 `X-Request-Id`（traceId）注入/透传，日志与响应头关联
   - [ ] OpenTelemetry 全链路（请求 → 服务 → AI → 数据库）待排期
@@ -431,8 +431,8 @@ Phase 5（P2）商业化与产品化
   - [ ] 真实设备/云账号环境端到端实测（dry-run 已单测验证，真实调用待接入设备后执行）
 - [x] 剧本模板库：暴力破解自动防御 / 恶意IP自动封禁 / 勒索告警应急响应（启动幂等导入）
 - [x] 接口：剧本 CRUD + 执行 + 待审批 + 审批（`/api/playbook/*`）
-- [x] 前端 SOAR 编排页（Playbook.vue）：列表/新建/编辑（步骤 JSON）/详情时间线/执行/审批，仅管理员可见
-  - [ ] 拖拽式可视化编排（当前为步骤 JSON 编辑，待排期）
+- [x] 前端 SOAR 编排页（Playbook.vue）：列表/新建/编辑/详情时间线/执行/审批，仅管理员可见
+- [x] 拖拽式可视化编排（N-19，2026-08-09）：`PlaybookCanvas.tsx` 基于 @xyflow/react，5 种节点类型（condition/action/notification/approval/wait），左工具栏 + 中间画布 + 右属性面板，画布/JSON 双模式切换
 
 ### 4.18 报表中心与数据沉淀
 
