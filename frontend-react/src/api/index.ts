@@ -1,4 +1,4 @@
-import { requestData } from './http';
+import http, { requestData } from './http';
 
 export const authApi = {
   login: (username: string, password: string) =>
@@ -91,8 +91,25 @@ export const situationalApi = {
 };
 
 // ============ 报告管理 ============
+export interface ReportStats {
+  total: number;
+  djpp: number;
+  virus: number;
+  baseline: number;
+  scan: number;
+  weekly: number;
+  monthly: number;
+}
+
+export interface ReportGenerateResult {
+  mdPath?: string;
+  docxPath?: string;
+  downloadUrl?: string;
+}
+
 export const reportsApi = {
-  list: () => requestData<{ reports: ReportItem[]; total: number }>({ method: 'GET', url: '/reports/list' }),
+  list: (params?: { page?: number; pageSize?: number; type?: string }) =>
+    requestData<{ reports: ReportItem[]; total: number }>({ method: 'GET', url: '/reports/list', params }),
   detail: (id: number) => requestData<Record<string, unknown>>({ method: 'GET', url: `/reports/${id}` }),
   remove: (id: number) => requestData<null>({ method: 'DELETE', url: `/reports/${id}` }),
   overview: () =>
@@ -100,7 +117,18 @@ export const reportsApi = {
       risk_ranking: Array<{ asset: string; total: number; critical: number; high: number; unresolved: number }>;
       compliance: { total_tasks: number; total_checks: number; compliance_rate: number };
       summary: Record<string, number>;
-    }>({ method: 'GET', url: '/reports/overview' })
+    }>({ method: 'GET', url: '/reports/overview' }),
+  /** 报告统计（总/等保/病毒/基线/扫描/周报/月报） */
+  stats: () => requestData<ReportStats>({ method: 'GET', url: '/reports/stats' }),
+  /** 为指定报告生成 Markdown 并返回下载地址 */
+  generateMd: (reportId: number) =>
+    requestData<ReportGenerateResult>({ method: 'POST', url: `/reports/${reportId}/generate-md` }),
+  /** 为指定报告生成 DOCX 并返回下载地址 */
+  generateDocx: (reportId: number) =>
+    requestData<ReportGenerateResult>({ method: 'POST', url: `/reports/${reportId}/generate-docx` }),
+  /** 批量导出 CSV（type: alerts|scan|baseline|reports，带 BOM 中文表头） */
+  exportCsv: (type: string) =>
+    http.get<Blob>('/reports/export/csv', { params: { type }, responseType: 'blob' })
 };
 
 // ============ 网络扫描 ============

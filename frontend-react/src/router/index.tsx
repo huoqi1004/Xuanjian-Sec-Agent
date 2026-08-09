@@ -10,6 +10,7 @@ import Device from '@/pages/Device';
 import Djpp from '@/pages/Djpp';
 import Login from '@/pages/Login';
 import Playbook from '@/pages/Playbook';
+import Reports from '@/pages/Reports';
 import Situational from '@/pages/Situational';
 import Users from '@/pages/Users';
 import Virus from '@/pages/Virus';
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: 'virus', element: <Virus /> },
       { path: 'djpp', element: <Djpp /> },
       { path: 'playbook', element: <Playbook /> },
+      { path: 'reports', element: <Reports /> },
       { path: 'config', element: <Config /> }
     ]
   },
