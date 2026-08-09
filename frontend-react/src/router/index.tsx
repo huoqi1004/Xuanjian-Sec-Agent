@@ -2,11 +2,11 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import MainLayout from '@/layouts/MainLayout';
 import AgentWorkbench from '@/pages/AgentWorkbench';
-import Baseline from '@/pages/Baseline';
 import Dashboard from '@/pages/Dashboard';
+import Djpp from '@/pages/Djpp';
 import Login from '@/pages/Login';
-import Scan from '@/pages/Scan';
 import Situational from '@/pages/Situational';
+import Virus from '@/pages/Virus';
 import { useUserStore } from '@/stores/user';
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -27,10 +27,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
-      { path: 'scan', element: <Scan /> },
-      { path: 'baseline', element: <Baseline /> },
       { path: 'situational', element: <Situational /> },
-      { path: 'agent', element: <AgentWorkbench /> }
+      { path: 'agent', element: <AgentWorkbench /> },
+      { path: 'virus', element: <Virus /> },
+      { path: 'djpp', element: <Djpp /> }
     ]
   },
   { path: '*', element: <Navigate to="/dashboard" replace /> }

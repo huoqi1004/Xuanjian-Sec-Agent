@@ -187,11 +187,256 @@ export const baselineApi = {
     requestData<BaselineResultsData>({ method: 'GET', url: `/baseline/results/${taskId}` })
 };
 
-// 以下模块桩：C5-C10 逐个填充
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const virusApi = {} as any;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const djppApi = {} as any;
+// ============ 病毒查杀 ============
+export interface VirusRecord {
+  id?: number;
+  file_name?: string;
+  file_hash_md5?: string;
+  file_hash_sha256?: string;
+  file_size?: number;
+  detection_result?: string;
+  detection_source?: string;
+  model_score?: number;
+  uploaded_by?: number;
+  created_at?: string;
+}
+
+export interface VirusHash {
+  id?: number;
+  hash_value?: string;
+  hash_type?: string;
+  threat_name?: string;
+  virus_name?: string;
+  severity?: string;
+  threat_level?: string;
+  source?: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface VirusEngineResult {
+  engine?: string;
+  status?: string;
+  verdict?: string;
+  confidence?: number;
+  detail?: string;
+  responseTime?: number;
+  [key: string]: unknown;
+}
+
+/** POST /virus/upload 返回的扫描结果 */
+export interface VirusScanData {
+  scanId?: string;
+  recordId?: number | null;
+  fileName?: string;
+  fileSize?: number;
+  hashes?: { md5?: string; sha1?: string; sha256?: string };
+  engines?: Record<string, VirusEngineResult>;
+  decision?: {
+    verdict?: string;
+    confidence?: number;
+    recommendation?: string;
+    primaryEngine?: string;
+    maliciousScore?: number;
+    suspiciousScore?: number;
+  };
+  report?: { title?: string; aiSummary?: string; [key: string]: unknown };
+  totalTime?: number;
+}
+
+/** GET /virus/report/:scanId 返回的扫描报告 */
+export interface VirusScanReport {
+  scanId?: string;
+  file?: string | { originalname?: string; size?: number };
+  hashes?: Record<string, string>;
+  engineResults?: Array<Record<string, unknown>>;
+  decision?: Record<string, unknown>;
+  report?: { title?: string; aiSummary?: string; [key: string]: unknown };
+  scannedAt?: string;
+}
+
+export const virusApi = {
+  /** 上传文件进行多引擎查杀（FormData + multipart） */
+  upload: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return requestData<VirusScanData>({
+      method: 'POST',
+      url: '/virus/upload',
+      data: formData,
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  /** 兼容旧版：直接返回记录数组（后端无 /records 时走 scan-history 的兜底逻辑） */
+  records: () => requestData<VirusRecord[]>({ method: 'GET', url: '/virus/records' }),
+  /** 扫描历史（分页） */
+  scanHistory: (page = 1, pageSize = 20) =>
+    requestData<{ list: VirusRecord[]; total: number; page: number; pageSize: number }>({
+      method: 'GET',
+      url: '/virus/scan-history',
+      params: { page, pageSize }
+    }),
+  /** 扫描报告详情 */
+  report: (scanId: string) =>
+    requestData<VirusScanReport>({ method: 'GET', url: `/virus/report/${scanId}` }),
+  /** 病毒哈希列表（分页/搜索） */
+  hashList: (params: { page?: number; pageSize?: number; search?: string }) =>
+    requestData<{ list: VirusHash[]; total: number; page: number; pageSize: number }>({
+      method: 'GET',
+      url: '/virus/hash-list',
+      params
+    }),
+  /** 哈希分析（多源威胁情报查询） */
+  analyzeHash: (hash: string, hashType = 'md5') =>
+    requestData<VirusHash[]>({ method: 'POST', url: '/virus/analyze-hash', data: { hash, hashType } }),
+  /** 导出 AI 查杀报告 */
+  exportReport: (scanId: string, format = 'markdown') =>
+    requestData<{ report: string; format: string; scanId: string; fileName?: string }>({
+      method: 'POST',
+      url: '/virus/export-report',
+      data: { scanId, format }
+    })
+};
+
+// ============ 等保测评 ============
+export interface DjppLevel {
+  id: number;
+  level: number;
+  name: string;
+  description?: string;
+  created_at?: string;
+}
+
+export interface DjppCategory {
+  id: number;
+  level_id: number;
+  category_code: string;
+  category_name: string;
+  description?: string;
+}
+
+export interface DjppCheck {
+  id: number;
+  category_id: number;
+  check_code: string;
+  check_name: string;
+  description?: string;
+  check_command?: string;
+  expected_value?: string;
+  severity?: string;
+  requirement_type?: string;
+  category_name?: string;
+  level_id?: number;
+}
+
+export interface DjppTask {
+  id: string;
+  level: number;
+  name: string;
+  description?: string;
+  status: string;
+  progress?: number;
+  started_at?: string;
+  completed_at?: string;
+  created_by?: number;
+  created_by_name?: string;
+  created_at?: string;
+}
+
+export interface DjppResult {
+  id?: number;
+  task_id?: string;
+  check_id?: number;
+  check_code?: string;
+  check_name: string;
+  category_name?: string;
+  actual_value?: string;
+  status?: string;
+  evidence?: string;
+  comment?: string;
+  severity?: string;
+}
+
+export interface DjppTaskDetail {
+  task: DjppTask;
+  results: DjppResult[];
+  stats: {
+    total?: number;
+    pass?: number;
+    fail?: number;
+    warning?: number;
+    complianceRate?: number | string;
+  };
+}
+
+export interface DjppReport {
+  id: string;
+  title: string;
+  type?: string;
+  content?: string;
+  generated_by?: number;
+  generated_by_name?: string;
+  created_at?: string;
+}
+
+/** POST /djpp/tasks/:id/report 返回的测评报告内容 */
+export interface DjppReportData {
+  reportId?: string;
+  taskId?: string;
+  level?: number;
+  taskName?: string;
+  generatedAt?: string;
+  stats?: DjppTaskDetail['stats'];
+  aiAnalysis?: string;
+  content?: string;
+  details?: Array<Record<string, unknown>>;
+}
+
+export const djppApi = {
+  /** 测评等级列表 */
+  levels: () => requestData<DjppLevel[]>({ method: 'GET', url: '/djpp/levels' }),
+  /** 指定等级的安全类别 */
+  categories: (level: number) =>
+    requestData<DjppCategory[]>({ method: 'GET', url: `/djpp/levels/${level}/categories` }),
+  /** 指定类别的检查项 */
+  checks: (categoryId: number) =>
+    requestData<DjppCheck[]>({ method: 'GET', url: `/djpp/categories/${categoryId}/checks` }),
+  /** 指定等级的全部检查项 */
+  levelChecks: (level: number) =>
+    requestData<DjppCheck[]>({ method: 'GET', url: `/djpp/levels/${level}/checks` }),
+  /** 测评任务列表 */
+  tasks: (params?: { page?: number; pageSize?: number }) =>
+    requestData<{ tasks: DjppTask[]; total: number; page: number; pageSize: number }>({
+      method: 'GET',
+      url: '/djpp/tasks',
+      params
+    }),
+  /** 创建测评任务 */
+  create: (data: { level: number; name: string; description?: string }) =>
+    requestData<{ taskId: string; status: string }>({ method: 'POST', url: '/djpp/tasks', data }),
+  /** 任务详情（含检查项结果与统计） */
+  detail: (taskId: string) =>
+    requestData<DjppTaskDetail>({ method: 'GET', url: `/djpp/tasks/${taskId}` }),
+  /** 生成 AI 测评报告（耗时较长） */
+  report: (taskId: string) =>
+    requestData<DjppReportData>({ method: 'POST', url: `/djpp/tasks/${taskId}/report`, timeout: 120000 }),
+  /** 等保报告列表 */
+  reports: (params?: { page?: number; pageSize?: number }) =>
+    requestData<{ reports: DjppReport[]; total: number; page: number; pageSize: number }>({
+      method: 'GET',
+      url: '/djpp/reports',
+      params
+    }),
+  /** 删除等保报告 */
+  deleteReport: (reportId: string) =>
+    requestData<null>({ method: 'DELETE', url: `/djpp/reports/${reportId}` }),
+  /** 生成并下载 DOCX 报告（通用报告服务） */
+  generateDocx: (reportId: string) =>
+    requestData<{ docxPath?: string; downloadUrl?: string }>({
+      method: 'POST',
+      url: `/reports/${reportId}/generate-docx`
+    })
+};
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const defenseApi = {} as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
