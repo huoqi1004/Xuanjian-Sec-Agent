@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import MainLayout from '@/layouts/MainLayout';
+import AgentWorkbench from '@/pages/AgentWorkbench';
 import Login from '@/pages/Login';
 import { useUserStore } from '@/stores/user';
 
@@ -27,7 +28,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Placeholder title="安全概览" /> },
-      { path: 'agent', element: <Placeholder title="Agent 工作台" /> }
+      { path: 'agent', element: <AgentWorkbench /> }
     ]
   },
   { path: '*', element: <Navigate to="/dashboard" replace /> }
