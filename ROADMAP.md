@@ -406,7 +406,6 @@ Phase 5（P2）商业化与产品化
 ## Phase 5（P2）：商业化与产品化 ✅ 已执行
 
 ### 4.16 多租户与细粒度 RBAC
-
 **任务清单**：
 - [x] 组织维度数据隔离：
   - migration 004 建 `organizations` 表 + `users.org_id`（默认组织，存量用户自动归属）
@@ -443,6 +442,44 @@ Phase 5（P2）商业化与产品化
 - [x] 数据大屏聚合：`GET /api/reports/overview`（合规态势、风险排行、全局汇总）
   - [ ] 前端领导视图大屏页（聚合端点已就绪，页面待排期）
 - [ ] 报告统一模板引擎（当前各模块独立生成，待排期）
+
+---
+
+## Phase 6（P2）：Multi-Agent 编排 + React 前端 ✅ 已执行（N-25，2026-08-09）
+
+> 详细实施计划与回滚方案见 [N-25-MultiAgent-Tools-React架构改造计划.md](./N-25-MultiAgent-Tools-React架构改造计划.md)
+
+### 6.1 多 Agent 编排框架（后端内部重构兼容）
+- [x] **Agent 基类与上下文**：`server/agents/baseAgent.js`（`createContext` 黑板式共享上下文 + `BaseAgent.execute` 统一计时/指标/日志/步骤记录）
+- [x] **Agent 注册中心**：`server/agents/registry.js`（name → 构造类，重复注册保护）
+- [x] **工具注册表**：`server/agents/tools/registry.js`（元数据 name/desc/params/risk + handler，统一审计/异常兜底/指标；`executeToolByName`）
+- [x] **14 个存量工具迁移 + 2 个新增**：`intelTools`（5）/`queryTools`（4）/`actionTools`（3）/`defenseTools`（4），`aiService.executeTool` 变兼容壳转发注册表（行为等价）
+- [x] **7 类业务 Agent**：`planner`（LLM 规划+规则回退）/`executor`（逐步执行+中间结果注入+重试）/`analyst`（告警研判）/`intel`（威胁情报）/`reporter`（报告）/`scan`（扫描）/`defense`（高危动作+人工确认）
+- [x] **编排器**：`server/agents/orchestrator.js`——任务→角色路由→执行→高危确认→LLM 总结（模板回退）；修复 ExecutorAgent 绕过人工确认的高危语义回归（非高危步骤执行 + 高危步骤交 defense）
+- [x] **兼容红线**：`agentService.js` 转调编排器，`/api/ai/agent/run|confirm|pending` 签名不变，原 87 Jest 用例 + agentService 7 例零回归
+- [x] **工作台接口**：`GET /api/ai/agent/tools`（工具目录）、`GET /api/ai/agent/plan`（计划预览）
+
+### 6.2 工具能力增强
+- [x] 高危工具（block_ip/account_lock）审计双落库：`action_logs`（业务动作）+ `audit_logs`（operation_type=defense_action）
+- [x] 工具目录完整性校验固化为回归测试（AGENT_TOOL_CATALOG 9 项全部注册）
+- [ ] 交换机/云安全组真实适配器、更多场景工具（待排期）
+
+### 6.3 React 前端全量迁移（frontend-react/）
+- [x] 工程脚手架：Vite + React 18 + TypeScript + Tailwind v4 + Zustand + React Router 6 + 手动 shadcn 风格 UI 组件集
+- [x] 基础设施：axios 封装（Bearer 注入/401 跳转/统一 toast）、用户 store（persist）、WS store（重连+心跳+按类型订阅）、MainLayout、路由守卫
+- [x] **14 页全量迁移**：Login/Dashboard/Scan/Baseline/Virus/Djpp/Assistant/Situational/Defense/Device/Users/Playbook/Config/Reports
+- [x] **Agent 工作台（新增）**：任务输入→计划预览→执行→逐步结果→高危确认弹窗→pending 轮询
+- [x] 修复 Vue 版遗留问题：用户创建 role→role_id、指令与后端白名单对齐、报告导出走真实链路（generate-* → /reports/download/:filename）
+- [x] 静态托管三级切换：`frontend-react/dist` → `frontend-app/dist` → `frontend/`，`FRONTEND_DIR` 显式覆盖
+- [x] 质量门禁：ESLint（flat config）+ Prettier + type-check + build；CI 新增 `react-build` job
+- [ ] ECharts 按需引入降体积（当前全量 1.55MB JS，待优化）
+- [ ] react-router v6 audit 2 项 moderate（非 SSR 场景可利用面低，升级 v7 为破坏性变更，待排期）
+
+### 6.4 验收
+- [x] 后端 Jest：**16 suites / 108 tests 全绿**（基线 87 → 108）
+- [x] 前端：`npm run build` 0 错误、`npm run lint` 0 errors、`npm run format:check` 通过、`npm run type-check` 通过
+- [x] 接口实测：`/api/ai/agent/tools`（16 工具）、`/api/ai/agent/plan`（6 步计划）、`/api/ai/agent/run`（编排器端到端 success）、登录/仪表盘 code=0
+- [x] `npm audit` 0 漏洞（后端）
 
 ---
 

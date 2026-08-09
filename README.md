@@ -10,8 +10,9 @@
 xuanjian-security-agent/
 ├── server/                    # Node.js 后端服务
 │   ├── server.js              # 主入口
+│   ├── agents/                # 多 Agent 框架（编排器/7 类 Agent/工具注册表）
 │   ├── config/                # 配置管理
-│   ├── db/                    # 数据库（SQLite）
+│   ├── db/                    # 数据库（SQLite + 驱动抽象层）
 │   ├── middleware/             # 中间件（认证/权限/审计）
 │   ├── routes/                # API路由
 │   ├── services/              # 业务服务
@@ -23,13 +24,19 @@ xuanjian-security-agent/
 │   ├── poisoning_detector.py  # 投毒检测
 │   ├── llm_report.py          # LLM报告生成
 │   └── models/                # AI模型文件
-├── frontend/                  # 旧版前端（已由 frontend-app 取代，兼容保留）
+├── frontend/                  # 旧版前端（已由 frontend-app / frontend-react 取代，兼容保留）
 ├── frontend-app/              # 前端工程（Vite + Vue3 + TypeScript + Pinia）
 │   ├── src/views/             # 12 个业务页面组件
 │   ├── src/api/               # API 封装（axios + 拦截器）
 │   ├── src/stores/            # Pinia 状态管理
 │   ├── src/layouts/           # 主布局（侧边栏/顶栏）
 │   └── dist/                  # 构建产物（npm run build 生成，后端自动托管）
+├── frontend-react/            # React 前端（React 18 + Vite + TS + Tailwind + shadcn 风格 UI）
+│   ├── src/pages/             # 14 个业务页面 + Agent 工作台
+│   ├── src/api/               # API 封装（axios + 拦截器 + 认证）
+│   ├── src/stores/            # Zustand 状态管理（用户/WebSocket）
+│   ├── src/components/        # UI 组件（button/card/table/dialog/toast 等）+ EChart
+│   └── dist/                  # 构建产物（npm run build 生成，后端优先托管）
 ├── docker-compose.yml         # Docker编排
 ├── Dockerfile.server          # 后端Dockerfile
 ├── Dockerfile.ai              # AI服务Dockerfile
@@ -83,15 +90,25 @@ pip install -r requirements.txt
 python app.py
 ```
 
-5. **前端开发（可选）**
+5. **前端开发（React 版，推荐）**
+```bash
+cd frontend-react
+npm install
+npm run dev        # 开发模式 http://localhost:5174（代理 /api 与 /ws 到 3000）
+npm run build      # 生产构建，产物 dist/ 由后端优先托管
+```
+
+6. **前端开发（Vue 版，兼容保留）**
 ```bash
 cd frontend-app
 npm install
 npm run dev        # 开发模式 http://localhost:5173（代理 /api 与 /ws 到 3000）
-npm run build      # 生产构建，产物 dist/ 由后端自动托管
+npm run build      # 生产构建，产物 dist/ 由后端回退托管
 ```
 
-6. **使用Docker部署（推荐）**
+> **静态托管优先级**：`frontend-react/dist` → `frontend-app/dist` → `frontend/`；可通过 `FRONTEND_DIR` 环境变量显式指定前端目录。
+
+7. **使用Docker部署（推荐）**
 ```bash
 docker-compose up -d
 ```
@@ -142,8 +159,11 @@ docker-compose up -d
 
 ## 技术栈
 
-- **后端**: Express.js, better-sqlite3, jsonwebtoken, json-rules-engine
-- **AI服务**: Flask, Transformers, PyTorch, OpenAI API
+- **后端**: Express.js, better-sqlite3（可切 MySQL/PG）, jsonwebtoken, json-rules-engine
+- **多 Agent 框架**: 规划/执行/研判/情报/报告/扫描/防御 7 类 Agent + 编排器（`server/agents/`），工具注册表集中管理 16 个工具
+- **前端（React）**: React 18, Vite, TypeScript, Tailwind CSS, Zustand, React Router 6, ECharts
+- **前端（Vue）**: Vue 3, Vite, TypeScript, Pinia, Element Plus, ECharts
+- **AI服务**: Flask, Transformers, PyTorch, DeepSeek API
 - **通信**: REST API, WebSocket
 - **部署**: Docker, Docker Compose
 
