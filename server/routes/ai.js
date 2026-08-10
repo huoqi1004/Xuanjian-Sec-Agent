@@ -1,12 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middleware/auth');
+const { auditLog } = require('../middleware/audit');
 const aiService = require('../services/aiService');
+const kbIntegrity = require('../services/kbIntegrityService');
+const threatLLMFusion = require('../services/threatLLMFusion');
+const modelArb = require('../services/modelArbitrator');
+const diffPrivacy = require('../services/diffPrivacyService');
+const wasmSandbox = require('../services/wasmSandboxService');
 const logger = require('../utils/logger');
 
 router.use(authMiddleware);
 
-router.post('/chat', async (req, res) => {
+router.post('/chat', auditLog('ai_chat'), async (req, res) => {
   try {
     const { message, conversation_id = 'default' } = req.body;
     
@@ -29,7 +35,8 @@ router.post('/chat', async (req, res) => {
     } else {
       res.json({
         code: -1,
-        message: result.error || '处理失败'
+        message: result.error || '处理失败',
+        data: { content: result.content }
       });
     }
   } catch (err) {
@@ -72,7 +79,7 @@ router.delete('/history/:conversation_id', async (req, res) => {
   }
 });
 
-router.post('/report/security', async (req, res) => {
+router.post('/report/security', auditLog('ai_report_security'), async (req, res) => {
   try {
     const { type = 'daily' } = req.body;
     const { getDb } = require('../db/database');
@@ -115,7 +122,7 @@ router.post('/report/security', async (req, res) => {
   }
 });
 
-router.post('/report/scan', async (req, res) => {
+router.post('/report/scan', auditLog('ai_report_scan'), async (req, res) => {
   try {
     const { task_id } = req.body;
     const { getDb } = require('../db/database');
@@ -169,7 +176,7 @@ router.post('/report/baseline', async (req, res) => {
   }
 });
 
-router.post('/analyze/threat', async (req, res) => {
+router.post('/analyze/threat', auditLog('ai_analyze_threat'), async (req, res) => {
   try {
     const { ioc_data } = req.body;
     const result = await aiService.analyzeThreatIntel(ioc_data);
@@ -382,6 +389,169 @@ router.get('/knowledge', async (req, res) => {
   } catch (err) {
     logger.error('知识库列表失败:', err.message);
     res.status(500).json({ code: -1, message: '获取知识库失败（AI 服务不可用）' });
+  }
+});
+
+router.post('/knowledge/add', auditLog('kb_add'), async (req, res) => {
+  try {
+    const { title, content, category, source } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ code: -1, message: 'title 和 content 不能为空' });
+    }
+    const result = kbIntegrity.addDocument({ title, content, category, source });
+    if (!result.approved) {
+      return res.json({ code: -1, message: result.reason || '文档未通过安全扫描' });
+    }
+    res.json({ code: 0, message: '文档入库成功', data: { id: result.id, hash: result.hash, warnings: result.warnings } });
+  } catch (err) {
+    logger.error('知识库添加失败:', err.message);
+    res.status(500).json({ code: -1, message: '添加失败: ' + err.message });
+  }
+});
+
+router.get('/knowledge/integrity', async (req, res) => {
+  try {
+    const anomalies = kbIntegrity.verifyIntegrity();
+    res.json({
+      code: 0,
+      message: anomalies.length > 0 ? '发现异常' : '完整性正常',
+      data: { anomaly_count: anomalies.length, anomalies }
+    });
+  } catch (err) {
+    logger.error('知识库完整性校验失败:', err.message);
+    res.status(500).json({ code: -1, message: '校验失败: ' + err.message });
+  }
+});
+
+router.get('/knowledge/docs', async (req, res) => {
+  try {
+    const docs = kbIntegrity.listDocuments();
+    const stats = kbIntegrity.getCategoryStats();
+    res.json({ code: 0, message: 'success', data: { documents: docs, category_stats: stats } });
+  } catch (err) {
+    logger.error('知识库列表失败:', err.message);
+    res.status(500).json({ code: -1, message: '获取失败: ' + err.message });
+  }
+});
+
+// ── Phase 4: 威胁情报 LLM 融合 ──────────────────────────────
+router.post('/threat-fusion/sync', auditLog('threat_fusion_sync'), async (req, res) => {
+  try {
+    const result = await threatLLMFusion.manualFetch();
+    res.json({ code: 0, message: result.updated ? '威胁情报已更新' : '情报无变化', data: result });
+  } catch (err) {
+    logger.error('威胁情报同步失败:', err.message);
+    res.status(500).json({ code: -1, message: '同步失败: ' + err.message });
+  }
+});
+
+router.get('/threat-fusion/status', async (req, res) => {
+  try {
+    res.json({
+      code: 0,
+      data: {
+        last_update: threatLLMFusion.getLastUpdateTimestamp(),
+        segments_count: threatLLMFusion.getDynamicPromptSegments().length
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: err.message });
+  }
+});
+
+// ── Phase 4: 多模型混合仲裁 ────────────────────────────────
+router.post('/arbitrate', auditLog('model_arbitrate'), async (req, res) => {
+  try {
+    const { messages, models, minConsensus } = req.body;
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ code: -1, message: 'messages 为必填数组' });
+    }
+    const result = await modelArb.arbitrate(messages, { models, minConsensus });
+    res.json({ code: 0, message: '仲裁完成', data: result });
+  } catch (err) {
+    logger.error('模型仲裁失败:', err.message);
+    res.status(500).json({ code: -1, message: '仲裁失败: ' + err.message });
+  }
+});
+
+router.get('/models', async (req, res) => {
+  try {
+    res.json({ code: 0, data: { models: modelArb.getRegisteredModels() } });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: err.message });
+  }
+});
+
+// ── Phase 4: 差分隐私投毒检测 ──────────────────────────────
+router.post('/knowledge/add-dp', auditLog('kb_add_dp'), async (req, res) => {
+  try {
+    const { title, content, category, source, epsilon, sensitivity } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ code: -1, message: 'title 和 content 不能为空' });
+    }
+    const result = diffPrivacy.addDocumentWithDP({ title, content, category, source, epsilon, sensitivity });
+    if (!result.approved) {
+      return res.json({ code: -1, message: result.reason || '文档未通过安全扫描' });
+    }
+    res.json({
+      code: 0, message: '文档入库成功（差分隐私保护）',
+      data: { id: result.id, anomaly_score: result.anomaly_score, is_anomaly: result.is_anomaly, dp_params: result.dp_params }
+    });
+  } catch (err) {
+    logger.error('差分隐私入库失败:', err.message);
+    res.status(500).json({ code: -1, message: '入库失败: ' + err.message });
+  }
+});
+
+router.get('/privacy/audit', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    res.json({ code: 0, data: { logs: diffPrivacy.getPrivacyAuditLog(limit) } });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: err.message });
+  }
+});
+
+router.post('/privacy/detect', auditLog('privacy_detect'), async (req, res) => {
+  try {
+    const threshold = parseFloat(req.body.threshold) || 0.7;
+    const result = diffPrivacy.detectPoisoningDocs(threshold);
+    res.json({ code: 0, message: result.detected_count > 0 ? '发现异常' : '检测正常', data: result });
+  } catch (err) {
+    logger.error('投毒检测失败:', err.message);
+    res.status(500).json({ code: -1, message: '检测失败: ' + err.message });
+  }
+});
+
+// ── Phase 4: WebAssembly 沙箱 ──────────────────────────────
+router.post('/sandbox/wasm', auditLog('wasm_sandbox'), async (req, res) => {
+  try {
+    const { filePath } = req.body;
+    if (!filePath) {
+      return res.status(400).json({ code: -1, message: 'filePath 不能为空' });
+    }
+    const result = await wasmSandbox.analyzeWithWasmSandbox(filePath);
+    res.json({ code: 0, message: '分析完成', data: result });
+  } catch (err) {
+    logger.error('WASM沙箱分析失败:', err.message);
+    res.status(500).json({ code: -1, message: '分析失败: ' + err.message });
+  }
+});
+
+router.get('/sandbox/wasm/history', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    res.json({ code: 0, data: { logs: wasmSandbox.getAnalysisHistory(limit) } });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: err.message });
+  }
+});
+
+router.get('/sandbox/wasm/stats', async (req, res) => {
+  try {
+    res.json({ code: 0, data: wasmSandbox.getStats() });
+  } catch (err) {
+    res.status(500).json({ code: -1, message: err.message });
   }
 });
 

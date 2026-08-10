@@ -57,10 +57,22 @@ class MultiEngineScanService {
         ];
 
         const engineResultsMap = {};
+        const engineLogParts = [];
         engineResults.forEach((result, index) => {
             const engine = engines[index];
             if (result.status === 'fulfilled') {
                 engineResultsMap[engine.key] = result.value;
+                const r = result.value;
+                engineLogParts.push(`[${engine.name}] ${r.status ?? r.verdict ?? 'completed'}(${(r.responseTime ?? 0)}ms)`);
+                if (r.verdict === 'malicious' || r.verdict === 'poisoned') {
+                    logger.info(`[多引擎扫描] 🔴 引擎命中: ${engine.name} → ${r.verdict} | 置信度: ${(r.confidence * 100).toFixed(1)}% | ${r.detail}`);
+                } else if (r.verdict === 'suspicious') {
+                    logger.info(`[多引擎扫描] 🟡 引擎可疑: ${engine.name} → ${r.verdict} | 置信度: ${(r.confidence * 100).toFixed(1)}% | ${r.detail}`);
+                } else if (r.verdict === 'clean') {
+                    logger.info(`[多引擎扫描] 🟢 引擎安全: ${engine.name} | 置信度: ${(r.confidence * 100).toFixed(1)}%`);
+                } else if (r.status === 'skipped') {
+                    logger.info(`[多引擎扫描] ⚪ 引擎跳过: ${engine.name} | ${r.detail}`);
+                }
             } else {
                 engineResultsMap[engine.key] = {
                     engine: engine.name, status: 'error',
@@ -68,11 +80,38 @@ class MultiEngineScanService {
                     detail: result.reason?.message || '引擎调用失败',
                     responseTime: 0
                 };
+                logger.warn(`[多引擎扫描] ❌ 引擎异常: ${engine.name} | ${result.reason?.message || '未知错误'}`);
             }
         });
+        logger.info(`[多引擎扫描] 引擎结果汇总: ${engineLogParts.join(', ')}`);
 
         // 4. AI驱动决策仲裁
         const decision = this._aiArbitrate(engineResultsMap, hashes, file);
+        logger.info(`[多引擎扫描] 仲裁结果: verdict=${decision.verdict} | maliciousScore=${decision.maliciousScore.toFixed(3)} | suspiciousScore=${decision.suspiciousScore.toFixed(3)} | confidence=${(decision.confidence * 100).toFixed(1)}% | primaryEngine=${decision.primaryEngine}`);
+
+        // 4.5 零日威胁动态沙箱分析（当所有引擎均为 unknown 但熵值异常时触发）
+        if (decision.verdict === 'clean' || decision.verdict === 'suspicious') {
+            const allUnknown = Object.values(engineResultsMap).every(
+                e => e.verdict === 'unknown' || e.status === 'skipped' || e.status === 'error'
+            );
+            const entropyResult = engineResultsMap['entropy'];
+            const highEntropy = entropyResult && entropyResult.verdict === 'suspicious';
+            if (allUnknown && highEntropy) {
+                logger.info('[多引擎扫描] 所有引擎 unknown + 熵值异常，触发沙箱分析');
+                const sandboxResult = await this._sandboxAnalysis(file, hashes);
+                engineResultsMap['sandbox'] = sandboxResult;
+                if (sandboxResult.verdict === 'malicious') {
+                    decision.verdict = 'malicious';
+                    decision.confidence = sandboxResult.confidence;
+                    decision.primaryEngine = '动态沙箱';
+                    decision.recommendation = '沙箱分析判定为恶意，建议立即隔离';
+                } else if (sandboxResult.verdict === 'suspicious' && decision.verdict === 'clean') {
+                    decision.verdict = 'suspicious';
+                    decision.confidence = sandboxResult.confidence;
+                    decision.primaryEngine = '动态沙箱';
+                }
+            }
+        }
 
         // 5. 生成查杀报告
         const report = await this._generateScanReport(file, hashes, engineResultsMap, decision, startTime);
@@ -270,6 +309,8 @@ class MultiEngineScanService {
             const detections = data.DetectionsInfo || [];
             const detectionNames = detections.map(d => d.DetectionName).filter(Boolean);
 
+            logger.info(`[卡巴斯基] API响应: zone=${zone} | detections=${detectionNames.length > 0 ? detectionNames.join(',') : 'none'} | fileStatus=${data.FileStatus || 'N/A'}`);
+
             return {
                 engine: '卡巴斯基OpenTIP', status: 'completed',
                 verdict: zoneMap[zone] || 'unknown',
@@ -300,7 +341,9 @@ class MultiEngineScanService {
     async _scanAIMalware(filePath) {
         const start = Date.now();
         try {
+            logger.info(`[AI恶意代码检测] 开始AI检测: ${filePath}`);
             const result = await aiService.detectMalware(filePath);
+            logger.info(`[AI恶意代码检测] 完成 | is_malicious=${result.is_malicious} | score=${result.score.toFixed(4)} | method=${result.method || 'unknown'} | anomalies=${JSON.stringify(result.anomalies || [])}`);
             return {
                 engine: 'AI恶意代码检测', status: 'completed',
                 verdict: result.is_malicious ? 'malicious' : 'clean',
@@ -375,6 +418,7 @@ class MultiEngineScanService {
 
             const result = response.data?.results?.[0];
             if (!result || !result.info?.malware) {
+                logger.info(`[360病毒特征库] 未匹配到已知特征，判定为安全`);
                 return {
                     engine: '360病毒特征库', status: 'completed',
                     verdict: 'clean', confidence: 0.05,
@@ -382,6 +426,8 @@ class MultiEngineScanService {
                     responseTime: Date.now() - start
                 };
             }
+
+            logger.info(`[360病毒特征库] 命中: ${info.malware} | family=${features.family || '未知'} | type=${features.threat_type || '未知'}`);
 
             const info = result.info;
             const features = info.exts || {};
@@ -412,6 +458,7 @@ class MultiEngineScanService {
         try {
             const data = fs.readFileSync(filePath);
             const fileSize = data.length;
+            logger.info(`[文件熵值分析] 开始分析: ${filePath} | 文件大小: ${fileSize} bytes`);
             if (fileSize === 0) {
                 return { engine: '文件熵值分析', status: 'completed', verdict: 'unknown', confidence: 0, detail: '空文件', responseTime: Date.now() - start };
             }
@@ -448,6 +495,8 @@ class MultiEngineScanService {
             } else {
                 detail = `文件熵值正常(${entropy.toFixed(2)})，未发现异常`;
             }
+
+            logger.info(`[文件熵值分析] 熵值计算完成: entropy=${entropy.toFixed(4)} | verdict=${verdict} | confidence=${confidence} | ${detail}`);
 
             return {
                 engine: '文件熵值分析', status: 'completed',
@@ -487,24 +536,33 @@ class MultiEngineScanService {
         };
 
         for (const [key, result] of Object.entries(engineResults)) {
-            if (result.status === 'skipped' || result.status === 'error') continue;
+            if (result.status === 'skipped' || result.status === 'error') {
+                logger.info(`[仲裁引擎] ${result.engine || key}: ${result.status} (${result.detail})`);
+                continue;
+            }
 
             const weight = engineWeights[key] || 0.5;
             totalWeight += weight;
 
             if (result.verdict === 'malicious' || result.verdict === 'poisoned') {
                 maliciousWeight += weight * result.confidence;
+                logger.info(`[仲裁引擎] ${result.engine}: malicious | weight=${weight} | confidence=${result.confidence.toFixed(2)} | 累计maliciousWeight=${maliciousWeight.toFixed(3)}`);
                 if (result.confidence > primaryConfidence) {
                     primaryConfidence = result.confidence;
                     primaryEngine = result.engine;
                 }
             } else if (result.verdict === 'suspicious') {
                 suspiciousWeight += weight * result.confidence;
+                logger.info(`[仲裁引擎] ${result.engine}: suspicious | weight=${weight} | confidence=${result.confidence.toFixed(2)} | 累计suspiciousWeight=${suspiciousWeight.toFixed(3)}`);
+            } else {
+                logger.info(`[仲裁引擎] ${result.engine}: ${result.verdict} | weight=${weight}`);
             }
         }
 
+        logger.info(`[仲裁汇总] totalWeight=${totalWeight.toFixed(2)} | maliciousWeight=${maliciousWeight.toFixed(3)} | suspiciousWeight=${suspiciousWeight.toFixed(3)}`);
         const maliciousScore = totalWeight > 0 ? maliciousWeight / totalWeight : 0;
         const suspiciousScore = totalWeight > 0 ? suspiciousWeight / totalWeight : 0;
+        logger.info(`[仲裁评分] maliciousScore=${maliciousScore.toFixed(3)} | suspiciousScore=${suspiciousScore.toFixed(3)} | 阈值0.6(malicious)/0.3(可疑)`);
 
         let verdict, confidence, recommendation;
 
@@ -621,6 +679,119 @@ class MultiEngineScanService {
         summary += `*玄鉴安全智能体 - 多引擎协同病毒查杀系统*\n`;
 
         return summary;
+    }
+
+    /**
+     * 零日威胁动态沙箱分析
+     * 当所有静态引擎均返回 unknown 且文件熵值异常时触发
+     * 优先调用 Python AI 微服务，失败时降级为启发式本地分析
+     */
+    async _sandboxAnalysis(file, hashes) {
+        const start = Date.now();
+        try {
+            // 调用 Python AI 微服务的沙箱分析接口
+            const result = await aiService.callAiServiceFileDetection('/api/analyze/sandbox', file.path);
+            if (result && typeof result.verdict === 'string') {
+                const verdictMap = { 'malicious': 'malicious', 'suspicious': 'suspicious', 'clean': 'clean', 'unknown': 'suspicious' };
+                return {
+                    engine: '动态沙箱',
+                    status: 'completed',
+                    verdict: verdictMap[result.verdict] || 'suspicious',
+                    confidence: result.confidence || 0.5,
+                    detail: result.detail || `沙箱分析: ${result.verdict}`,
+                    behavior_summary: result.behavior_summary || null,
+                    responseTime: Date.now() - start
+                };
+            }
+        } catch (e) {
+            logger.warn(`[沙箱] Python 微服务调用失败，降级为启发式分析: ${e.message}`);
+        }
+
+        // 降级：启发式本地沙箱分析
+        const info = this._heuristicSandboxAnalysis(file.path, hashes);
+        logger.info(`[沙箱] 启发式分析完成: verdict=${info.verdict} | confidence=${info.confidence.toFixed(2)}`);
+        return {
+            engine: '动态沙箱',
+            status: 'completed',
+            ...info,
+            responseTime: Date.now() - start
+        };
+    }
+
+    /**
+     * 启发式本地沙箱分析（Python 服务不可用时的降级方案）
+     */
+    _heuristicSandboxAnalysis(filePath, hashes) {
+        try {
+            const data = fs.readFileSync(filePath);
+            const fileSize = data.length;
+            const entropy = require('./aiService').calculateEntropy ?
+                this._calcEntropy(data) : 0;
+
+            let score = 0;
+            const behaviors = [];
+
+            // PE 特征分析
+            if (data.length >= 2 && data[0] === 0x4d && data[1] === 0x5a) {
+                score += 0.2;
+                behaviors.push('PE可执行文件');
+
+                // 检查可疑导入
+                const text = data.toString('utf8', 0, Math.min(65536, fileSize));
+                const suspiciousApis = [
+                    'VirtualAlloc', 'WriteProcessMemory', 'CreateRemoteThread',
+                    'NtUnmapViewOfSection', 'SetWindowsHookEx', 'GetAsyncKeyState',
+                    'URLDownloadToFile', 'InternetOpen', 'WinExec', 'system('
+                ];
+                for (const api of suspiciousApis) {
+                    if (text.includes(api)) {
+                        score += 0.1;
+                        behaviors.push(`疑似调用API:${api}`);
+                    }
+                }
+            }
+
+            // 高熵 + 加密特征
+            const calcEntropy = (buffer) => {
+                const freq = new Map();
+                for (const byte of buffer) freq.set(byte, (freq.get(byte) || 0) + 1);
+                let ent = 0;
+                const len = buffer.length;
+                for (const count of freq.values()) {
+                    const p = count / len;
+                    ent -= p * Math.log2(p);
+                }
+                return ent;
+            };
+            const ent = calcEntropy(data);
+            if (ent > 7.8) { score += 0.3; behaviors.push(`高熵(${ent.toFixed(2)})，可能加密/混淆`); }
+            else if (ent > 7.0) { score += 0.15; behaviors.push(`熵值偏高(${ent.toFixed(2)})`); }
+
+            // 已知恶意字符串
+            const malwareStrings = ['powershell', '-enc', '-encodedcommand', 'cmd.exe', '/c',
+                'eval(', 'exec(', 'base64', 'wscript', 'cscript', 'mshta', 'regsvr32'];
+            for (const s of malwareStrings) {
+                if (data.includes(s)) { score += 0.15; behaviors.push(`含可疑字符串:${s}`); }
+            }
+
+            const verdict = score >= 0.5 ? 'malicious' : (score >= 0.25 ? 'suspicious' : 'clean');
+            return { verdict, confidence: Math.min(score, 1.0), detail: behaviors.join('; ') || '未发现异常行为特征' };
+        } catch (e) {
+            return { verdict: 'unknown', confidence: 0, detail: `沙箱分析失败: ${e.message}` };
+        }
+    }
+
+    _calcEntropy(data) {
+        if (!data || data.length === 0) return 0;
+        const freq = new Map();
+        for (const byte of data) freq.set(byte, (freq.get(byte) || 0) + 1);
+        let entropy = 0;
+        const len = data.length;
+        for (const count of freq.values()) {
+            const p = count / len;
+            entropy -= p * Math.log2(p);
+        }
+        return entropy;
     }
 
     /**

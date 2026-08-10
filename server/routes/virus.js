@@ -137,6 +137,28 @@ router.post('/ai-scan', upload.single('file'), checkPermission('POST'), auditLog
 }));
 
 /**
+ * POST /api/virus/llm-scan - LLM 驱动智能病毒查杀
+ * 7引擎并行扫描 + LLM深度分析 + 自动生成处置方案
+ */
+router.post('/llm-scan', upload.single('file'), checkPermission('POST'), auditLog('virus_llm_scan'), asyncHandler(async (req, res) => {
+    if (!req.file) return fail(res, '未上传文件或文件类型不受支持（请使用可执行文件/文档/压缩包等常见格式）');
+
+    const llmVirusScan = require('../services/llmVirusScanService');
+    const result = await llmVirusScan.runLLMVirusScan(req.file, req.user.id);
+    return success(res, result, 'LLM智能查杀完成');
+}));
+
+/**
+ * POST /api/virus/schedule-scan - 手动触发定时扫描任务
+ * 扫描 VIRUS_SCAN_WATCH_DIRS 配置的所有目录
+ */
+router.post('/schedule-scan', checkPermission('POST'), auditLog('virus_schedule_scan'), asyncHandler(async (req, res) => {
+    const { runScanTask } = require('../services/virusScanScheduler');
+    const summary = await runScanTask();
+    return success(res, summary, '定时扫描任务完成');
+}));
+
+/**
  * GET /api/virus/hash-list - 获取病毒哈希列表
  */
 router.get('/hash-list', checkPermission('GET'), asyncHandler(async (req, res) => {

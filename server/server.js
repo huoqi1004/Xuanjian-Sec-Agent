@@ -20,6 +20,7 @@ const { config, loadDbConfig } = require('./config');
 const logger = require('./utils/logger');
 const metrics = require('./utils/metrics');
 const metricsMiddleware = require('./middleware/metrics');
+const { authMiddleware } = require('./middleware/auth');
 const { initDatabase } = require('./db/init');
 const { runMigrations } = require('./db/migrations');
 const { closeDb, getDb } = require('./db/database');
@@ -42,21 +43,26 @@ async function startServer(options = {}) {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-          styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
-          imgSrc: ["'self'", "data:", "blob:"],
-          fontSrc: ["'self'", "data:", "https://unpkg.com"],
-          connectSrc: ["'self'", "ws:", "wss:"],
+          scriptSrc: ["'self'", "https://unpkg.com"],
+          styleSrc: ["'self'", "https://unpkg.com", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
           objectSrc: ["'none'"],
-          frameAncestors: ["'self'"]
+          frameSrc: ["'self'"],
+          frameAncestors: ["'self'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"]
         }
       },
+      hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+      referrerPolicy: { source: 'same-origin' },
       crossOriginEmbedderPolicy: false
     }));
 
     // CORS 白名单（可通过环境变量 CORS_ORIGINS 扩展，逗号分隔）
     const allowedOrigins = (process.env.CORS_ORIGINS ||
-      'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173')
+      'http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,http://localhost:5176,http://127.0.0.1:5176')
       .split(',').map(s => s.trim()).filter(Boolean);
 
     app.use(cors({
@@ -77,12 +83,26 @@ async function startServer(options = {}) {
     // 请求指标 + 链路追踪（X-Request-Id），置于路由之前
     app.use(metricsMiddleware);
 
+    // 全局限流：适度收紧，防止 API 滥用
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 1000,
-      message: { code: 1, message: '请求过于频繁，请稍后再试', data: null }
+      max: 300,
+      message: { code: 1, message: '请求过于频繁，请稍后再试', data: null },
+      standardHeaders: true,
+      legacyHeaders: false
     });
     app.use('/api/', limiter);
+
+    // 认证接口独立严格限流（防暴力破解）
+    const authLimiter = rateLimit({
+      windowMs: 60 * 1000,
+      max: 5,
+      message: { code: 1, message: '登录尝试过于频繁，请 1 分钟后再试', data: null },
+      standardHeaders: true,
+      legacyHeaders: false
+    });
+    app.use('/api/auth/login', authLimiter);
+    app.use('/api/auth/register', authLimiter);
 
     // 上传目录不再对外公开托管，避免上传的敏感/恶意文件被匿名访问
     // 静态资源优先使用 React 构建产物（frontend-react/dist），缺失时回退 frontend-app/dist，再回退旧版 frontend/
@@ -164,13 +184,13 @@ async function startServer(options = {}) {
       });
     });
 
-    // Prometheus 指标端点（文本格式，供 Prometheus 抓取）
-    app.get('/metrics', (req, res) => {
+    // Prometheus 指标端点（仅管理员可访问）
+    app.get('/metrics', authMiddleware, (req, res) => {
       res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
       res.send(metrics.render());
     });
 
-    app.get('/api/djpp-data-check', (req, res) => {
+    app.get('/api/djpp-data-check', authMiddleware, (req, res) => {
       const { getDb } = require('./db/database');
       const db = getDb();
       const tasks = db.prepare('SELECT * FROM djpp_tasks').all();
@@ -202,7 +222,10 @@ async function startServer(options = {}) {
       if (err.type === 'entity.parse.failed') {
         return res.status(400).json({ code: 1, message: '请求数据格式错误', data: null });
       }
-      serverError(res, err.message || '服务器内部错误');
+      // 生产环境不泄露内部错误信息
+      const isDev = process.env.NODE_ENV !== 'production';
+      const message = isDev ? (err.message || '服务器内部错误') : '服务器内部错误';
+      serverError(res, message);
     });
 
     const server = http.createServer(app);
@@ -373,6 +396,23 @@ async function startServer(options = {}) {
       logger.error('配置安全周报推送失败:', err.message);
     }
 
+    // 定时病毒扫描（默认每6小时，VIRUS_SCAN_ENABLED=0 可关闭）
+    try {
+      if (config.virusScan.enabled) {
+        nodeCron.schedule(config.virusScan.cron, () => {
+          const { runScanTask } = require('./services/virusScanScheduler');
+          runScanTask().catch((err) => {
+            logger.error('定时病毒扫描失败:', err.message);
+          });
+        });
+        logger.info(`定时任务已配置: 病毒扫描 (${config.virusScan.cron})，扫描目录: ${config.virusScan.watchDirs.join(', ')}`);
+      } else {
+        logger.info('定时病毒扫描已禁用（VIRUS_SCAN_ENABLED=0）');
+      }
+    } catch (err) {
+      logger.error('配置定时病毒扫描失败:', err.message);
+    }
+
     // 业务指标采集（每 30 秒刷新 DB 行数 / WS 连接数 gauge）
     const businessMetricsTimer = setInterval(() => {
       try {
@@ -395,12 +435,96 @@ async function startServer(options = {}) {
       logger.error('防御策略引擎初始化失败:', err.message);
     }
 
+    // 知识库完整性校验：每 6 小时自动校验一次
+    try {
+      nodeCron.schedule('0 */6 * * *', () => {
+        const { verifyIntegrity } = require('./services/kbIntegrityService');
+        try {
+          const anomalies = verifyIntegrity();
+          if (anomalies.length > 0) {
+            logger.error(`[KB-Integrity] 定时校验发现 ${anomalies.length} 处异常（可能遭篡改）`);
+          } else {
+            logger.info('[KB-Integrity] 定时校验通过，所有文档完整性正常');
+          }
+        } catch (e) {
+          logger.error('[KB-Integrity] 定时校验异常:', e.message);
+        }
+      });
+      logger.info('定时任务已配置: 知识库完整性校验 (每6小时)');
+    } catch (err) {
+      logger.error('配置知识库完整性校验失败:', err.message);
+    }
+
+    // 威胁情报 LLM 融合：每 4 小时拉取最新安全更新，注入系统 Prompt
+    try {
+      nodeCron.schedule('0 */4 * * *', async () => {
+        const { syncThreatIntelligence } = require('./services/threatLLMFusion');
+        try {
+          const result = await syncThreatIntelligence();
+          if (result.updated) {
+            logger.info(`[ThreatFusion] 威胁情报同步完成: ${result.update_count} 条更新`);
+          }
+        } catch (e) {
+          logger.error('[ThreatFusion] 威胁情报同步异常:', e.message);
+        }
+      });
+      logger.info('定时任务已配置: 威胁情报 LLM 融合 (每4小时)');
+    } catch (err) {
+      logger.error('配置威胁情报融合失败:', err.message);
+    }
+
+    // 差分隐私投毒检测：每 12 小时批量扫描知识库
+    try {
+      nodeCron.schedule('0 */12 * * *', () => {
+        const { detectPoisoningDocs } = require('./services/diffPrivacyService');
+        try {
+          const result = detectPoisoningDocs();
+          if (result.detected_count > 0) {
+            logger.error(`[DiffPrivacy] 投毒检测发现 ${result.detected_count} 处异常`);
+          } else {
+            logger.info('[DiffPrivacy] 投毒检测通过，所有文档正常');
+          }
+        } catch (e) {
+          logger.error('[DiffPrivacy] 投毒检测异常:', e.message);
+        }
+      });
+      logger.info('定时任务已配置: 差分隐私投毒检测 (每12小时)');
+    } catch (err) {
+      logger.error('配置投毒检测失败:', err.message);
+    }
+
     // 导入 SOAR 剧本模板（幂等）
     try {
       const playbookService = require('./services/playbookService');
       playbookService.seedTemplates();
     } catch (err) {
       logger.error('SOAR 剧本模板导入失败:', err.message);
+    }
+
+    // Phase 4: 初始化威胁情报 LLM 融合（启动时加载历史更新）
+    try {
+      const { loadAppliedUpdates } = require('./services/threatLLMFusion');
+      loadAppliedUpdates();
+      logger.info('[Phase4] 威胁情报 LLM 融合已初始化');
+    } catch (err) {
+      logger.error('[Phase4] 威胁情报融合初始化失败:', err.message);
+    }
+
+    // Phase 4: 初始化多模型仲裁器
+    try {
+      const { registerModel } = require('./services/modelArbitrator');
+      // 注册第二个 LLM 后端（如 OpenAI、Claude 等）
+      if (config.llm?.apiKey && config.llm.apiKey !== '') {
+        registerModel('openai', {
+          name: 'OpenAI-GPT',
+          apiKey: config.llm.apiKey,
+          apiBase: config.llm.apiBase,
+          model: config.llm.model || 'gpt-4o-mini'
+        });
+      }
+      logger.info('[Phase4] 多模型仲裁器已初始化');
+    } catch (err) {
+      logger.error('[Phase4] 多模型仲裁器初始化失败:', err.message);
     }
 
     const PORT = config.port;

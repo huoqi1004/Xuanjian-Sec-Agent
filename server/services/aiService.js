@@ -4,16 +4,21 @@ const path = require('path');
 const { config } = require('../config');
 const logger = require('../utils/logger');
 const metrics = require('../utils/metrics');
+const { sanitizeXSS } = require('../utils/security');
+const { detectPromptInjection, scanKnowledgeDoc } = require('./promptGuard');
+const { validateInput } = require('./inputValidator');
+const { analyzeBehavior } = require('./behavioralAnalyzer');
+const { detectHallucination } = require('./hallucinationDetector');
 
 /**
- * DeepSeek API 客户端
+ * Agnes LLM API 客户端
  */
-const deepseekClient = axios.create({
-  baseURL: config.deepseek.apiBase,
+const agnesClient = axios.create({
+  baseURL: config.agnes.apiBase,
   timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${config.deepseek.apiKey}`
+    'Authorization': `Bearer ${config.agnes.apiKey}`
   }
 });
 
@@ -26,12 +31,17 @@ const MAX_HISTORY_LENGTH = 20;
 
 /**
  * 保存对话历史（内存缓存 + 落库持久化，对应 ROADMAP 4.15）
+ * assistant 消息自动进行 XSS 净化
  */
 function saveHistory(conversationId, message) {
   try {
     const { getDb } = require('../db/database');
     const db = getDb();
-    const content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+    let content = typeof message.content === 'string' ? message.content : JSON.stringify(message.content);
+    // assistant 角色内容需净化 XSS，防止 LLM 返回恶意脚本
+    if (message.role === 'assistant') {
+      content = sanitizeXSS(content);
+    }
     db.prepare('INSERT INTO chat_history (conversation_id, role, content) VALUES (?, ?, ?)')
       .run(conversationId, message.role || 'user', content || '');
   } catch (err) {
@@ -311,22 +321,26 @@ ${alerts.filter(a => a.severity === 'critical').slice(0, 3).map(a => `  - ${a.de
 function parseCommand(message) {
   const lowerMsg = message.toLowerCase().trim();
   const originalMsg = message.trim();
-  
+  logger.debug(`[parseCommand] 原始消息: "${originalMsg}"`);
+
   if (lowerMsg === 'help' || originalMsg === '帮助' || originalMsg === '帮助信息') {
+    logger.debug('[parseCommand] 匹配命令: help');
     return { command: 'help', params: [] };
   }
-  
+
   if (lowerMsg === 'health' || originalMsg === '健康' || originalMsg === '系统健康' || originalMsg === '健康检查') {
+    logger.debug('[parseCommand] 匹配命令: health');
     return { command: 'health', params: [] };
   }
-  
+
   if (lowerMsg === 'clear history' || originalMsg === '清除历史' || originalMsg === '清空对话') {
+    logger.debug('[parseCommand] 匹配命令: clear');
     return { command: 'clear', params: ['history'] };
   }
-  
-  if (lowerMsg.startsWith('report ') || 
-      originalMsg.startsWith('安全日报') || 
-      originalMsg.startsWith('安全周报') || 
+
+  if (lowerMsg.startsWith('report ') ||
+      originalMsg.startsWith('安全日报') ||
+      originalMsg.startsWith('安全周报') ||
       originalMsg.startsWith('安全月报') ||
       originalMsg.startsWith('报告') ||
       originalMsg === '安全日报' ||
@@ -342,41 +356,62 @@ function parseCommand(message) {
     } else if (originalMsg.includes('日报') || originalMsg.includes('daily')) {
       type = 'daily';
     }
+    logger.debug(`[parseCommand] 匹配命令: report, type=${type}`);
     return { command: 'report', params: [type] };
   }
-  
+
   if (lowerMsg.startsWith('alerts') || originalMsg.startsWith('告警')) {
     const match = originalMsg.match(/告警\s*(\w+)/);
     const severity = match ? match[1] : '';
+    logger.debug(`[parseCommand] 匹配命令: alerts, severity="${severity}"`);
     return { command: 'alerts', params: severity ? [severity] : [] };
   }
-  
+
   if (lowerMsg.startsWith('threat intel ') || originalMsg.includes('威胁情报')) {
-    const parts = lowerMsg.split(' ');
     if (lowerMsg.startsWith('threat intel ')) {
-      return { command: 'threat_intel', params: [parts[2], parts.slice(3).join(' ')] };
-    } else {
-      return { command: 'threat_intel', params: ['', ''] };
+      const parts = lowerMsg.split(' ');
+      const iocType = parts[2] || '';
+      const value = parts.slice(3).join(' ') || '';
+      logger.debug(`[parseCommand] 匹配命令: threat_intel (英文指令), iocType="${iocType}", value="${value}", parts=[${parts.join(', ')}]`);
+      return { command: 'threat_intel', params: [iocType, value] };
     }
+    // 中文自然语言：提取 IP/域名/哈希
+    const ipMatch = originalMsg.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+    const domainMatch = originalMsg.match(/([a-zA-Z0-9][a-zA-Z0-9\-]*\.[a-zA-Z]{2,})/);
+    const hashMatch = originalMsg.match(/([0-9a-fA-F]{32}|[0-9a-fA-F]{40}|[0-9a-fA-F]{64})/);
+    let iocType = '';
+    let value = '';
+    if (ipMatch) { iocType = 'ip'; value = ipMatch[1]; }
+    else if (hashMatch) { iocType = 'hash'; value = hashMatch[1]; }
+    else if (domainMatch) { iocType = 'domain'; value = domainMatch[1]; }
+    logger.debug(`[parseCommand] 匹配命令: threat_intel (中文自然语言), iocType="${iocType}", value="${value}", ipMatch=${ipMatch ? `"${ipMatch[1]}"` : 'null'}, hashMatch=${hashMatch ? `"${hashMatch[1]}"` : 'null'}, domainMatch=${domainMatch ? `"${domainMatch[1]}"` : 'null'}`);
+    if (!value) {
+      logger.warn('[parseCommand] 威胁情报命令未提取到有效的 IOC 值（IP/域名/哈希）');
+    }
+    return { command: 'threat_intel', params: [iocType, value] };
   }
-  
+
   if (lowerMsg.startsWith('analyze hash ') || originalMsg.includes('分析哈希')) {
-    const hash = lowerMsg.startsWith('analyze hash ') 
+    const hash = lowerMsg.startsWith('analyze hash ')
       ? lowerMsg.replace('analyze hash ', '')
       : (originalMsg.replace('分析哈希', '').trim() || '');
+    logger.debug(`[parseCommand] 匹配命令: analyze_hash, hash="${hash}"`);
     return { command: 'analyze_hash', params: [hash] };
   }
-  
+
   if (lowerMsg.startsWith('alerts')) {
     const parts = lowerMsg.split(' ');
     const severity = parts[1] || '';
+    logger.debug(`[parseCommand] 匹配命令: alerts, severity="${severity}"`);
     return { command: 'alerts', params: [severity] };
   }
-  
+
   if (lowerMsg.startsWith('analyze alerts')) {
+    logger.debug('[parseCommand] 匹配命令: analyze_alerts');
     return { command: 'analyze_alerts', params: [] };
   }
-  
+
+  logger.debug('[parseCommand] 未匹配任何命令，返回 null（将走 LLM 工具调用路径）');
   return null;
 }
 
@@ -388,7 +423,11 @@ async function executeTool(toolName, params) {
   const { executeToolByName } = require('../agents/tools/registry');
   const { registerBuiltinTools } = require('../agents/tools');
   registerBuiltinTools();
-  return executeToolByName(toolName, params);
+  try {
+    return await executeToolByName(toolName, params);
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 }
 
 /**
@@ -483,26 +522,53 @@ async function searchKnowledge(query, topK = 5) {
 }
 
 /**
- * 调用 DeepSeek LLM
+ * 调用 Agnes LLM
  */
 async function callDeepSeek(messages, options = {}) {
-  metrics.inc('ai_calls_total', { provider: 'deepseek' }, 1, 'AI 调用次数');
+  metrics.inc('ai_calls_total', { provider: 'agnes' }, 1, 'AI 调用次数');
+
+  // Token 预算控制：防止上下文过长导致 DoS 或上下文中毒
+  const MAX_CONTEXT_TOKENS = 16000;
+  const totalTokens = estimateTokensForMessages(messages);
+  if (totalTokens > MAX_CONTEXT_TOKENS) {
+    logger.warn(`[LLM-Token] 上下文超限: ${totalTokens} tokens > ${MAX_CONTEXT_TOKENS}，执行截断`);
+    messages = truncateMessagesToBudget(messages, MAX_CONTEXT_TOKENS);
+  }
   try {
     const requestBody = {
-      model: config.deepseek.model,
+      model: config.agnes.model,
       messages: messages,
-      max_tokens: options.maxTokens || config.deepseek.maxTokens,
+      max_tokens: options.maxTokens || config.agnes.maxTokens,
       temperature: options.temperature || 0.7,
       ...(options.tools ? { tools: options.tools } : {}),
       ...(options.tool_choice ? { tool_choice: options.tool_choice } : {})
     };
 
-    const response = await deepseekClient.post('/chat/completions', requestBody);
+    const response = await agnesClient.post('/chat/completions', requestBody);
     return { success: true, data: response.data };
   } catch (err) {
-    metrics.inc('ai_calls_failed_total', { provider: 'deepseek' }, 1, 'AI 调用失败次数');
-    logger.error('DeepSeek API 调用失败:', err.response?.data || err.message);
+    metrics.inc('ai_calls_failed_total', { provider: 'agnes' }, 1, 'AI 调用失败次数');
+    logger.error('Agnes API 调用失败:', err.response?.data || err.message);
     return { success: false, error: err.response?.data?.error?.message || err.message };
+  }
+}
+
+/**
+ * 解析 <function_calls> XML 格式的工具调用
+ */
+function parseFunctionCalls(jsonStr) {
+  try {
+    const arr = JSON.parse(jsonStr);
+    return arr.map((item, idx) => ({
+      id: `call_${Date.now()}_${idx}`,
+      type: 'function',
+      function: {
+        name: item.name,
+        arguments: JSON.stringify(item.parameters || {})
+      }
+    }));
+  } catch {
+    return null;
   }
 }
 
@@ -512,7 +578,7 @@ async function callDeepSeek(messages, options = {}) {
 async function chatWithTools(userMessage, context = {}) {
   try {
     let systemPrompt = `
-你是玄鉴安全智能体，一个专业的网络安全AI助手，基于DeepSeek V4 Pro驱动。你的任务是帮助用户分析安全数据、生成安全报告和提供安全建议。
+你是玄鉴安全智能体，一个专业的网络安全AI助手，基于Agnes模型驱动。你的任务是帮助用户分析安全数据、生成安全报告和提供安全建议。
 
 你可以使用以下工具：
 - get_threat_intel: 多源威胁情报聚合查询（微步TI、Shodan、AbuseIPDB、VirusTotal、Google Safe Browsing等7个数据源）
@@ -537,12 +603,25 @@ async function chatWithTools(userMessage, context = {}) {
 `.trim();
 
     // RAG 增强：检索内部知识库，将相关条目注入 system prompt 供回答引用
+    // 知识库内容与 system prompt 严格隔离，防止知识库投毒影响核心指令
     try {
       const kbHits = await searchKnowledge(userMessage, 3);
       if (kbHits.length > 0) {
-        const kbSection = '\n\n## 参考知识（来自内部知识库，回答时可引用佐证）\n' +
-          kbHits.map((h) => `【${h.title}】${h.content}`).join('\n');
-        systemPrompt += kbSection;
+        // 入库前安全检查（防御知识库投毒）
+        const safeHits = [];
+        for (const hit of kbHits) {
+          const scan = scanKnowledgeDoc(hit);
+          if (scan.approved) {
+            safeHits.push(hit);
+          } else {
+            logger.warn(`[AI-Security] RAG 知识库文档被拒绝: title=${hit.title}, reason=${scan.reason}`);
+          }
+        }
+        if (safeHits.length > 0) {
+          // 使用明确分隔符隔离知识库内容，LLM 需标注引用来源
+          const kbSection = `\n\n=== KNOWLEDGE_BASE ===\n以下知识来自内部知识库（已安全扫描），回答时请引用并标注来源 [DOC:ID]：\n${safeHits.map((h, i) => `[DOC:${i+1}] ${h.title}:\n${h.content}`).join('\n\n')}\n=== END_KNOWLEDGE_BASE ===`;
+          systemPrompt += kbSection;
+        }
       }
     } catch (e) {
       // RAG 检索失败不影响主流程
@@ -556,7 +635,7 @@ async function chatWithTools(userMessage, context = {}) {
     const response = await callDeepSeek(messages, { tools });
     
     if (!response.success) {
-      return { success: false, error: response.error || 'DeepSeek API 调用失败' };
+      return { success: false, error: response.error || 'Agnes API 调用失败' };
     }
     
     const choice = response.data?.choices?.[0];
@@ -565,25 +644,28 @@ async function chatWithTools(userMessage, context = {}) {
     }
 
     const toolCalls = choice.message?.tool_calls;
-    if (toolCalls && toolCalls.length > 0) {
+    // 兼容 <function_calls> XML 格式（部分 LLM 返回此格式而非 OpenAI tool_calls）
+    const functionCallsMatch = choice.message?.content?.match(/<function_calls>\s*(\[.*?\])\s*<\/function_calls>/s);
+    const parsedToolCalls = toolCalls || (functionCallsMatch ? parseFunctionCalls(functionCallsMatch[1]) : []);
+    if (parsedToolCalls && parsedToolCalls.length > 0) {
       const toolResults = [];
-      
-      for (const toolCall of toolCalls) {
+
+      for (const toolCall of parsedToolCalls) {
         let args;
         try {
-          args = JSON.parse(toolCall.function.arguments);
+          args = JSON.parse(toolCall.function?.arguments || JSON.stringify(toolCall.parameters || {}));
         } catch (parseErr) {
           toolResults.push({
-            tool_call_id: toolCall.id,
-            tool_name: toolCall.function.name,
+            tool_call_id: toolCall.id || `call_${Date.now()}`,
+            tool_name: toolCall.function?.name || toolCall.name,
             result: { success: false, error: '参数解析失败: ' + parseErr.message }
           });
           continue;
         }
-        const result = await executeTool(toolCall.function.name, args);
+        const result = await executeTool(toolCall.function?.name || toolCall.name, args);
         toolResults.push({
-          tool_call_id: toolCall.id,
-          tool_name: toolCall.function.name,
+          tool_call_id: toolCall.id || `call_${Date.now()}`,
+          tool_name: toolCall.function?.name || toolCall.name,
           result: result
         });
       }
@@ -600,7 +682,18 @@ async function chatWithTools(userMessage, context = {}) {
 
       const finalResponse = await callDeepSeek(messages);
       if (!finalResponse.success) {
-        return { success: false, error: finalResponse.error || 'DeepSeek API 调用失败', tool_results: toolResults };
+        logger.warn('工具调用后 LLM 二次回复失败，降级使用工具结果生成回复:', finalResponse.error);
+        // 降级：从工具结果直接构造回复，避免整体失败
+        const failedTools = toolResults.filter(r => !r.result?.success);
+        if (failedTools.length > 0) {
+          const toolErrorList = failedTools.map(r => `• ${r.tool_name}: ${r.result?.error || '执行失败'}`).join('\n');
+          return {
+            success: true,
+            content: `已尝试执行工具，但部分工具调用失败：\n\n${toolErrorList}\n\n\n\n如需进一步分析，请检查相关 API Key 配置。`,
+            tool_results: toolResults
+          };
+        }
+        return { success: false, error: finalResponse.error || 'Agnes API 调用失败', tool_results: toolResults };
       }
       
       return {
@@ -610,9 +703,30 @@ async function chatWithTools(userMessage, context = {}) {
       };
     }
 
+    let rawContent = choice.message?.content || '无响应';
+
+    // 幻觉检测：验证 LLM 输出是否编造了知识库引用
+    if (rawContent) {
+      try {
+        const kbHits = await searchKnowledge(userMessage, 3);
+        const hallucinationCheck = detectHallucination(rawContent, kbHits, null);
+        if (hallucinationCheck.is_hallucination) {
+          logger.warn(`[AI-Security] 检测到模型幻觉: score=${hallucinationCheck.confidence.toFixed(2)}, action=${hallucinationCheck.action}`);
+          rawContent = `[⚠️ AI 分析置信度较低，建议人工核实] ${rawContent}`;
+        } else if (hallucinationCheck.warning) {
+          rawContent = `[ℹ️ ${hallucinationCheck.warning}]\n${rawContent}`;
+        }
+      } catch (e) {
+        logger.warn('[AI-Security] 幻觉检测失败（降级处理）:', e.message);
+      }
+    }
+
+    // XSS 净化（assistant 输出安全）
+    const safeContent = sanitizeXSS(rawContent);
+
     return {
       success: true,
-      content: choice.message?.content || '无响应',
+      content: safeContent,
       tool_results: []
     };
   } catch (err) {
@@ -625,6 +739,40 @@ async function chatWithTools(userMessage, context = {}) {
  * AI安全助手对话
  */
 async function chatAssistant(conversationId, userMessage) {
+  // ① 输入安全校验（长度/控制字符/Unicode 混淆）
+  const inputCheck = validateInput(userMessage);
+  if (!inputCheck.valid) {
+    logger.warn(`[AI-Security] 输入校验失败: ${inputCheck.reason}, conversationId=${conversationId}`);
+    return { success: false, content: `⚠️ ${inputCheck.reason}` };
+  }
+  userMessage = inputCheck.sanitized;
+
+  // ② 行为分析（防模型窃取/高频探测/上下文中毒）
+  const behavior = analyzeBehavior(conversationId, userMessage);
+  if (behavior.action === 'block_and_alert') {
+    logger.warn(`[AI-Security] 行为异常阻断: userId=${conversationId}, alert=${behavior.alert}, ${behavior.details}`);
+    return { success: false, content: '⚠️ 请求异常，已触发安全告警，请联系管理员' };
+  }
+  if (behavior.action === 'reject') {
+    logger.warn(`[AI-Security] 输入拒绝: userId=${conversationId}, alert=${behavior.alert}, ${behavior.details}`);
+    return { success: false, content: '⚠️ 输入内容不符合安全规范，请简化您的提问' };
+  }
+  if (behavior.action === 'throttle') {
+    logger.warn(`[AI-Security] 频率限制: userId=${conversationId}, alert=${behavior.alert}`);
+    return { success: false, content: '⚠️ 请求过于频繁，请稍后再试' };
+  }
+
+  // ③ 提示词注入检测
+  const injectionCheck = detectPromptInjection(userMessage);
+  if (injectionCheck.is_attack) {
+    logger.warn(`[AI-Security] 提示词注入检测: score=${injectionCheck.score.toFixed(2)}, patterns=[${injectionCheck.matched_patterns.map(p => p.name).join(', ')}]`);
+    return { success: false, content: '⚠️ 您的输入包含疑似注入指令，已拒绝处理' };
+  }
+  if (injectionCheck.action === 'sanitize') {
+    userMessage = injectionCheck.sanitized_message;
+    logger.info(`[AI-Security] 提示词注入已净化，继续处理`);
+  }
+
   const parsedCommand = parseCommand(userMessage);
   
   if (parsedCommand) {
@@ -649,17 +797,6 @@ async function chatAssistant(conversationId, userMessage) {
       return result;
     }
     
-    if (command === 'alerts') {
-      saveHistory(conversationId, { role: 'user', content: userMessage });
-      const [severity] = params;
-      const result = await executeTool('get_alert_summary', severity ? { severity } : {});
-      const content = result.success 
-        ? `当前安全告警摘要：\n\n${result.data}`
-        : `查询失败: ${result.error}`;
-      saveHistory(conversationId, { role: 'assistant', content });
-      return { success: result.success, content };
-    }
-    
     if (command === 'report') {
       saveHistory(conversationId, { role: 'user', content: userMessage });
       const reportType = params[0] || 'daily';
@@ -678,10 +815,17 @@ async function chatAssistant(conversationId, userMessage) {
     if (command === 'threat_intel') {
       saveHistory(conversationId, { role: 'user', content: userMessage });
       const [type, value] = params;
-      const result = await executeTool('get_threat_intel', { type, value });
-      const content = result.success 
-        ? `找到 ${result.data.length} 条威胁情报：\n\n${result.data.map((item, i) => `${i+1}. [${item.ioc_type}] ${item.ioc_value} - ${item.description || '无描述'}`).join('\n')}`
-        : `查询失败: ${result.error}`;
+      const result = await executeTool('get_threat_intel', { iocType: type, value });
+      let content;
+      if (result.success && result.data) {
+        const d = result.data;
+        const sources = Array.isArray(d.sources)
+          ? d.sources.map((s, i) => `  ${i + 1}. [${s.source}] ${s.verdict || 'unknown'}`).join('\n')
+          : '  (无来源数据)';
+        content = `威胁情报查询结果（${type || '未知类型'}: ${value}）\n\n风险等级: ${d.riskLevel || 'unknown'}\n风险评分: ${d.riskScore ?? 'N/A'}\n摘要: ${d.summary || '无'}\n\n来源:\n${sources}`;
+      } else {
+        content = result.error ? `查询失败: ${result.error}` : '无结果';
+      }
       saveHistory(conversationId, { role: 'assistant', content });
       return { success: result.success, content };
     }
@@ -690,11 +834,23 @@ async function chatAssistant(conversationId, userMessage) {
       saveHistory(conversationId, { role: 'user', content: userMessage });
       const [hash] = params;
       const result = await executeTool('analyze_virus_hash', { hash });
-      const content = result.success 
-        ? result.data 
-          ? `⚠️ 检测到恶意软件：\n- 威胁名称: ${result.data.threat_name}\n- 严重级别: ${result.data.severity}\n- 来源: ${result.data.source}`
-          : `✅ 未在恶意数据库中找到该哈希`
-        : `查询失败: ${result.error}`;
+      let content;
+      if (result.success && result.data) {
+        const d = result.data;
+        if (d.threat_name) {
+          content = `⚠️ 检测到恶意软件：\n- 威胁名称: ${d.threat_name}\n- 严重级别: ${d.severity}\n- 来源: ${d.source}`;
+        } else if (d.hash) {
+          const sources = Array.isArray(d.sources) ? d.sources : [];
+          const threatEntries = sources.filter(s => s.verdict === 'malicious' || s.verdict === 'high_risk');
+          content = threatEntries.length > 0
+            ? `⚠️ 检测到恶意软件：\n- 哈希: ${d.hash}\n- 威胁来源: ${threatEntries.map(s => s.source).join(', ')}`
+            : `✅ 未在已知威胁数据库中找到该哈希: ${d.hash}`;
+        } else {
+          content = `✅ 哈希分析完成: ${hash}`;
+        }
+      } else {
+        content = result.error ? `查询失败: ${result.error}` : '无结果';
+      }
       saveHistory(conversationId, { role: 'assistant', content });
       return { success: result.success, content };
     }
@@ -1092,10 +1248,47 @@ async function healthCheck() {
   try {
     const testMessages = [{ role: 'user', content: 'hello' }];
     const response = await callDeepSeek(testMessages, { maxTokens: 10 });
-    return { status: 'healthy', data: { model: response.model || 'deepseek-chat' } };
+    return { status: 'healthy', data: { model: response.model || 'agnes-2.5-flash' } };
   } catch (err) {
     return { status: 'unavailable', error: err.message };
   }
+}
+
+/**
+ * 粗略 token 估算（中文约 1.5 字符/token，英文约 4 字符/token）
+ */
+function estimateTokens(text) {
+  if (typeof text !== 'string') return 0;
+  const cnChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  const enChars = text.length - cnChars;
+  return Math.ceil(cnChars / 1.5 + enChars / 4);
+}
+
+/**
+ * 计算消息列表的总 token 估算值
+ */
+function estimateTokensForMessages(messages) {
+  if (!Array.isArray(messages)) return 0;
+  return messages.reduce((sum, m) => sum + estimateTokens(m.content || ''), 0);
+}
+
+/**
+ * 将消息列表截断到 token 预算内
+ * 保留 system prompt（索引0）和最新2条消息，丢弃中间历史
+ */
+function truncateMessagesToBudget(messages, maxTokens) {
+  if (!Array.isArray(messages) || messages.length <= 3) return messages;
+
+  // 保留 system prompt，丢弃中间历史，保留最后1条用户消息
+  const systemMsg = messages[0];
+  const keepMessages = messages.slice(-2); // 保留最后2条（用户+assistant）
+  const truncated = [systemMsg, ...keepMessages];
+
+  const total = estimateTokensForMessages(truncated);
+  if (total <= maxTokens) return truncated;
+
+  // 如果仍超限，仅保留 system + 最新消息
+  return [systemMsg, keepMessages[keepMessages.length - 1]];
 }
 
 module.exports = {
@@ -1116,5 +1309,11 @@ module.exports = {
   healthCheck,
   callDeepSeek,
   searchKnowledge,
-  executeTool
+  executeTool,
+  // AI 安全能力（供外部调用）
+  detectPromptInjection,
+  validateInput,
+  analyzeBehavior,
+  detectHallucination,
+  scanKnowledgeDoc,
 };

@@ -1,13 +1,16 @@
 const fs = require('fs');
 const path = require('path');
 const { randomUUID } = require('crypto');
+const logConfig = require('../config/logging');
 
-const LOG_DIR = path.resolve(__dirname, '../../logs');
+const LOG_DIR = logConfig.getConfig().logDir;
 if (!fs.existsSync(LOG_DIR)) {
   fs.mkdirSync(LOG_DIR, { recursive: true });
 }
 
-const LOG_FILE = path.join(LOG_DIR, 'app.log');
+const LOG_FILE = path.join(LOG_DIR, logConfig.getConfig().appLog);
+const SERVER_LOG_FILE = path.join(LOG_DIR, logConfig.getConfig().serverLog);
+const ERROR_LOG_FILE = path.join(LOG_DIR, logConfig.getConfig().errorLog);
 
 const LOG_LEVELS = {
   debug: 0,
@@ -16,9 +19,10 @@ const LOG_LEVELS = {
   error: 3
 };
 
-const currentLevel = LOG_LEVELS[process.env.LOG_LEVEL] || LOG_LEVELS.debug;
+const config = logConfig.getConfig();
+const currentLevel = LOG_LEVELS[config.level] ?? LOG_LEVELS.debug;
 // LOG_FORMAT=json 输出结构化日志（便于 Loki/ELK 采集）；默认人类可读文本
-const jsonMode = (process.env.LOG_FORMAT || 'text') === 'json';
+const jsonMode = (config.format || 'text') === 'json';
 
 function formatTime(date) {
   const pad = (n) => n.toString().padStart(2, '0');
@@ -52,6 +56,12 @@ function log(level, args, context) {
     else if (level === 'warn') console.warn(line.trim());
     else console.log(line.trim());
 
+    // 同时写入 server.log（系统运行日志）
+    try {
+      const targetFile = level === 'error' ? ERROR_LOG_FILE : SERVER_LOG_FILE;
+      fs.appendFileSync(targetFile, line, 'utf8');
+    } catch (e) {}
+    // 写入 app.log（应用日志）
     try { fs.appendFileSync(LOG_FILE, line, 'utf8'); } catch (e) {}
     return;
   }
@@ -65,6 +75,12 @@ function log(level, args, context) {
   else if (level === 'warn') console.warn(logLine.trim());
   else console.log(logLine.trim());
 
+  // 同时写入 server.log（系统运行日志）
+  try {
+    const targetFile = level === 'error' ? ERROR_LOG_FILE : SERVER_LOG_FILE;
+    fs.appendFileSync(targetFile, logLine, 'utf8');
+  } catch (e) {}
+  // 写入 app.log（应用日志）
   try { fs.appendFileSync(LOG_FILE, logLine, 'utf8'); } catch (e) {}
 }
 
