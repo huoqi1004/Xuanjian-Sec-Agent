@@ -21,6 +21,8 @@ from rag import kb as knowledge_base
 try:
     from gan.detector import GANAnomalyDetector, GANAdversarialGenerator
     from gan.prompt_adversarial import PromptAdversarialGenerator, PromptGuardTester
+    from gan.version_manager import get_version_manager, MODEL_TYPE_ANOMALY, MODEL_TYPE_ADV
+    from gan.metrics_collector import get_metrics_collector
     GAN_AVAILABLE = True
 except ImportError:
     GAN_AVAILABLE = False
@@ -28,6 +30,10 @@ except ImportError:
     GANAdversarialGenerator = None
     PromptAdversarialGenerator = None
     PromptGuardTester = None
+    get_version_manager = None
+    get_metrics_collector = None
+    MODEL_TYPE_ANOMALY = 'anomaly_gan'
+    MODEL_TYPE_ADV = 'adversarial_gan'
 
 # 加载环境变量
 load_dotenv()
@@ -451,6 +457,162 @@ def gan_redteam_report():
         tester = PromptGuardTester()
         report = tester.get_report()
         return jsonify({'code': 0, 'message': '查询成功', 'data': report})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 4: 模型版本管理 + 监控指标
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/gan/model/register', methods=['POST'])
+def gan_register_model():
+    """
+    注册 GAN 模型版本
+    POST { model_type: str, version: str, file_path: str, training_stats: dict, notes: str }
+    """
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        data = request.get_json(silent=True) or {}
+        mgr = get_version_manager()
+        record = mgr.register_model(
+            model_type=data.get('model_type', MODEL_TYPE_ANOMALY),
+            version=data.get('version', '1.0.0'),
+            file_path=data.get('file_path', ''),
+            training_stats=data.get('training_stats'),
+            notes=data.get('notes'),
+        )
+        return jsonify({'code': 0, 'message': '模型注册成功', 'data': record})
+    except FileNotFoundError as e:
+        return jsonify({'code': 1, 'message': str(e)}), 404
+    except Exception as e:
+        logger.error('模型注册失败: %s', e)
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/model/deploy', methods=['POST'])
+def gan_deploy_model():
+    """
+    部署指定模型版本
+    POST { model_type: str, version: str }
+    """
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        data = request.get_json(silent=True) or {}
+        mgr = get_version_manager()
+        result = mgr.deploy_model(
+            model_type=data.get('model_type', MODEL_TYPE_ANOMALY),
+            version=data.get('version'),
+        )
+        return jsonify({'code': 0, 'message': '模型部署成功', 'data': result})
+    except Exception as e:
+        logger.error('模型部署失败: %s', e)
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/model/active', methods=['GET'])
+def gan_get_active_model():
+    """获取当前活动的 GAN 模型"""
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        data = request.get_json(silent=True) or {}
+        mgr = get_version_manager()
+        model_type = data.get('model_type', MODEL_TYPE_ANOMALY)
+        active = mgr.get_active_model(model_type)
+        return jsonify({'code': 0, 'message': '查询成功', 'data': active})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/model/list', methods=['GET'])
+def gan_list_models():
+    """列出所有 GAN 模型版本"""
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        data = request.get_json(silent=True) or {}
+        mgr = get_version_manager()
+        models = mgr.list_models(
+            model_type=data.get('model_type'),
+            status=data.get('status'),
+        )
+        return jsonify({'code': 0, 'message': '查询成功', 'data': models})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/model/cleanup', methods=['POST'])
+def gan_cleanup_models():
+    """清理旧版本模型"""
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        data = request.get_json(silent=True) or {}
+        mgr = get_version_manager()
+        result = mgr.cleanup_old_models(
+            model_type=data.get('model_type'),
+            keep=data.get('keep', 5),
+        )
+        return jsonify({'code': 0, 'message': '清理完成', 'data': result})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/model/summary', methods=['GET'])
+def gan_model_summary():
+    """获取 GAN 模型监控摘要"""
+    try:
+        if not GAN_AVAILABLE or get_version_manager is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        mgr = get_version_manager()
+        summary = mgr.get_metrics_summary()
+        return jsonify({'code': 0, 'message': '查询成功', 'data': summary})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/metrics/summary', methods=['GET'])
+def gan_metrics_summary():
+    """
+    获取 GAN 扫描指标摘要
+    GET ?hours=24
+    """
+    try:
+        if not GAN_AVAILABLE or get_metrics_collector is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        hours = int(request.args.get('hours', 24))
+        collector = get_metrics_collector()
+        summary = collector.get_summary(hours=hours)
+        return jsonify({'code': 0, 'message': '查询成功', 'data': summary})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
+
+
+@app.route('/api/gan/metrics/trend', methods=['GET'])
+def gan_metrics_trend():
+    """
+    获取 GAN 扫描趋势数据
+    GET ?hours=24&interval_hours=1
+    """
+    try:
+        if not GAN_AVAILABLE or get_metrics_collector is None:
+            return jsonify({'code': 1, 'message': 'GAN 模块不可用', 'data': None}), 503
+
+        hours = int(request.args.get('hours', 24))
+        interval = int(request.args.get('interval_hours', 1))
+        collector = get_metrics_collector()
+        trend = collector.get_trend(hours=hours, interval_hours=interval)
+        return jsonify({'code': 0, 'message': '查询成功', 'data': trend})
     except Exception as e:
         return jsonify({'code': 1, 'message': str(e)}), 500
 

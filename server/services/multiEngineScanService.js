@@ -6,6 +6,7 @@ const logger = require('../utils/logger');
 const { config } = require('../config');
 const { getDb } = require('../db/database');
 const aiService = require('./aiService');
+const GANVersionService = require('./ganVersionService');
 
 /**
  * 多引擎病毒查杀服务（增强版）
@@ -96,6 +97,9 @@ class MultiEngineScanService {
         const ganDecision = this._ganVoteMerge(engineResultsMap, decision);
         logger.info(`[GAN投票] 最终仲裁: verdict=${ganDecision.verdict} | confidence=${(ganDecision.confidence * 100).toFixed(1)}% | ganBoosted=${!!ganDecision.ganBoosted} | ganConflicted=${!!ganDecision.ganConflicted}`);
         decision = ganDecision;
+
+        // 4.6 记录 GAN 扫描指标（Phase 4）
+        this._recordGANMetrics(file, hashes, engineResultsMap, decision);
 
         // 4.5 零日威胁动态沙箱分析（当所有引擎均为 unknown 但熵值异常时触发）
         if (decision.verdict === 'clean' || decision.verdict === 'suspicious') {
@@ -676,6 +680,52 @@ class MultiEngineScanService {
         }
 
         return decision;
+    }
+
+    /**
+     * 记录 GAN 扫描指标（Phase 4）
+     * 将 GAN 引擎结果写入 gan_scan_metrics 表，供监控看板使用
+     */
+    _recordGANMetrics(file, hashes, engineResultsMap, decision) {
+        const ganResult = engineResultsMap['gan_anomaly'];
+        if (!ganResult || ganResult.status === 'skipped' || ganResult.status === 'error') {
+            return;
+        }
+
+        try {
+            const db = getDb();
+            db.prepare(`
+                INSERT INTO gan_scan_metrics
+                  (scan_id, file_path, file_hash_md5, file_size_bytes, model_version,
+                   recon_error, is_anomaly, anomaly_score, confidence, verdict,
+                   engine_verdict, engine_confidence, vote_merged, gan_boosted,
+                   gan_conflicted, response_time_ms, skipped, skip_reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                null,  // scan_id: 暂无关联
+                file.path || '',
+                hashes.md5 || null,
+                file.size || 0,
+                ganResult.ganModelVersion || 'unknown',
+                ganResult.reconstructionError || 0,
+                ganResult.verdict === 'suspicious' ? 1 : 0,
+                ganResult.anomalyScore || 0,
+                ganResult.confidence || 0,
+                decision.verdict || 'unknown',
+                ganResult.verdict || null,
+                ganResult.confidence || null,
+                (decision.ganBoosted || decision.ganConflicted) ? 1 : 0,
+                decision.ganBoosted ? 1 : 0,
+                decision.ganConflicted ? 1 : 0,
+                ganResult.responseTime || 0,
+                0,  // skipped
+                null,  // skip_reason
+            );
+            logger.debug(`[GAN指标] 记录成功: ${file.path} | verdict=${decision.verdict} | recon_error=${(ganResult.reconstructionError || 0).toFixed(6)}`);
+        } catch (error) {
+            // 表不存在时静默跳过（首次启动迁移可能尚未执行）
+            logger.debug(`[GAN指标] 记录跳过（表未就绪）: ${error.message}`);
+        }
     }
 
     /**
