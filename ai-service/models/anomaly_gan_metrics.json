@@ -1,0 +1,13 @@
+{
+  "best_auc": 0.0,
+  "final_recon_loss": 0.05183928273618221,
+  "anomaly_threshold": null,
+  "epochs": 20,
+  "batch_size": 16,
+  "input_dim": 784,
+  "latent_dim": 64,
+  "train_samples": 50,
+  "val_samples": 0,
+  "elapsed_seconds": 1.1,
+  "trained_at": "2026-08-11T16:47:38.376658"
+}

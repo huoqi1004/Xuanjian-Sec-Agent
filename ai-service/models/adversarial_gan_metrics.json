@@ -1,0 +1,10 @@
+{
+  "best_d_acc": 0.6429169178009033,
+  "final_g_loss": 0.6831598877906799,
+  "final_d_loss": 0.47039204835891724,
+  "epochs": 20,
+  "batch_size": 16,
+  "benign_samples": 50,
+  "elapsed_seconds": 0.3,
+  "trained_at": "2026-08-11T16:44:12.635894"
+}
