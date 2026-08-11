@@ -435,10 +435,10 @@ class MultiEngineScanService {
                 };
             }
 
-            logger.info(`[360病毒特征库] 命中: ${info.malware} | family=${features.family || '未知'} | type=${features.threat_type || '未知'}`);
-
             const info = result.info;
             const features = info.exts || {};
+            logger.info(`[360病毒特征库] 命中: ${info.malware} | family=${features.family || '未知'} | type=${features.threat_type || '未知'}`);
+
             return {
                 engine: '360病毒特征库', status: 'completed',
                 verdict: 'malicious',

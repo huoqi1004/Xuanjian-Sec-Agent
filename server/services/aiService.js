@@ -24,10 +24,26 @@ const agnesClient = axios.create({
 
 /**
  * 对话历史存储（内存）
+ * 使用 LRU 策略：最多保留 MAX_CONVERSATIONS 个会话，超出时淘汰最早创建的
  */
+const MAX_CONVERSATIONS = 500;
 const conversationHistory = new Map();
 
 const MAX_HISTORY_LENGTH = 20;
+
+/**
+ * 清理最旧的会话（LRU 淘汰）
+ */
+function _evictOldestConversation() {
+  if (conversationHistory.size <= MAX_CONVERSATIONS) return;
+  const oldestKey = [...conversationHistory.keys()].sort((a, b) => {
+    const aAge = conversationHistory.get(a)._createdAt || 0;
+    const bAge = conversationHistory.get(b)._createdAt || 0;
+    return aAge - bAge;
+  })[0];
+  logger.info(`[aiService] 会话数超限(${conversationHistory.size}/${MAX_CONVERSATIONS})，淘汰最旧会话: ${oldestKey}`);
+  conversationHistory.delete(oldestKey);
+}
 
 /**
  * 保存对话历史（内存缓存 + 落库持久化，对应 ROADMAP 4.15）
@@ -48,14 +64,20 @@ function saveHistory(conversationId, message) {
     logger.warn('对话历史落库失败:', err.message);
   }
 
-  let history = conversationHistory.get(conversationId) || [];
-  history.push(message);
-
-  if (history.length > MAX_HISTORY_LENGTH) {
-    history = history.slice(-MAX_HISTORY_LENGTH);
+  // 保存消息
+  if (!conversationHistory.has(conversationId)) {
+    conversationHistory.set(conversationId, {
+      messages: [],
+      _createdAt: Date.now(),
+    });
+    _evictOldestConversation();
   }
+  const conv = conversationHistory.get(conversationId);
+  conv.messages.push(message);
 
-  conversationHistory.set(conversationId, history);
+  if (conv.messages.length > MAX_HISTORY_LENGTH) {
+    conv.messages = conv.messages.slice(-MAX_HISTORY_LENGTH);
+  }
 }
 
 /**

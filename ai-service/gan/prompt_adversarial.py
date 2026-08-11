@@ -254,14 +254,16 @@ class PromptGuardTester:
     批量测试对抗样本的逃逸率，输出检测报告
     """
 
-    def __init__(self, prompt_guard=None):
+    def __init__(self, prompt_guard=None, max_results: int = 500):
         """
         Args:
             prompt_guard: PromptGuard 实例（用于检测）
                          如果为 None，使用内置规则检测
+            max_results:  结果列表最大长度（超出时淘汰最早的）
         """
         self.generator = PromptAdversarialGenerator()
         self.prompt_guard = prompt_guard
+        self.max_results = max_results
         self.results = []
 
     def test(self, base_prompt: str, n_variants: int = 20,
@@ -303,6 +305,11 @@ class PromptGuardTester:
             })
 
         self.results.extend(results)
+        # 限制结果列表长度，淘汰最早的结果
+        if len(self.results) > self.max_results:
+            removed = len(self.results) - self.max_results
+            self.results = self.results[removed:]
+            logger.info('红队测试结果已裁剪: 移除 %d 条旧记录 (max_results=%d)', removed, self.max_results)
 
         # 按类型统计
         by_type = {}
