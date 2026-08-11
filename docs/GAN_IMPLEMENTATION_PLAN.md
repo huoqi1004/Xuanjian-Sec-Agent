@@ -425,6 +425,32 @@ app.py                           新增 2 个红队测试端点
 | `/api/gan/metrics` | GET | 查询 GAN 监控指标 |
 | `/api/gan/prompt-test` | POST | 运行 Prompt 对抗测试 |
 
+### Phase 4 交付清单
+
+```
+ai-service/gan/version_manager.py        GANVersionManager（SQLite+内存回退）
+ai-service/gan/metrics_collector.py      GANMetricsCollector（批量写入+聚合查询）
+ai-service/test/test_gan_version_metrics.py  19 项单元测试 ✅
+server/db/migrations/015_create_gan_model_versions.js  gan_model_versions 表
+server/db/migrations/016_create_gan_scan_metrics.js    gan_scan_metrics 表
+server/services/ganVersionService.js     Node 端版本管理封装
+server/services/multiEngineScanService.js  新增 _recordGANMetrics()
+ai-service/app.py                        新增 8 个 GAN 管理 API 端点
+```
+
+### Phase 4 API 端点
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/gan/model/register` | POST | 注册新模型版本 |
+| `/api/gan/model/deploy` | POST | 部署指定版本 |
+| `/api/gan/model/active` | GET | 获取活动模型 |
+| `/api/gan/model/list` | GET | 列出所有模型版本 |
+| `/api/gan/model/cleanup` | POST | 清理旧版本 |
+| `/api/gan/model/summary` | GET | 模型监控摘要 |
+| `/api/gan/metrics/summary` | GET | 扫描指标摘要 |
+| `/api/gan/metrics/trend` | GET | 扫描指标趋势 |
+
 ---
 
 ## 四、文件清单
@@ -489,7 +515,7 @@ torchaudio>=2.0.0     # 可选，仅用于音频异常检测
 | Phase 1 — 基础框架 | ✅ 完成 | 2026-08-11 | `f713f14` / 标签 `v1.3.0-gan-phase1` |
 | Phase 2 — 集成推理 | ✅ 完成 | 2026-08-11 | `a8e2c5f` / 标签 `v1.3.0-gan-phase2` |
 | Phase 3 — 对抗增强 | ✅ 完成 | 2026-08-11 | `a3f9e2d` / 标签 `v1.3.0-gan-phase3` |
-| Phase 4 — 生产化 | ⏳ 规划中 | — | — |
+| Phase 4 — 生产化 | ✅ 完成 | 2026-08-11 | `21a46c7` / 标签 `v1.3.0-gan-phase4` |
 
 ### Phase 1 交付清单
 
