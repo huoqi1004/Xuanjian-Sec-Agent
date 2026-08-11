@@ -30,3 +30,8 @@ Thumbs.db
 
 # 测试产物
 coverage/
+
+# 运行时数据库
+ai-service/models/*.db
+server/db_debug.js
+server/db_debug2.js
