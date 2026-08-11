@@ -1291,6 +1291,43 @@ function truncateMessagesToBudget(messages, maxTokens) {
   return [systemMsg, keepMessages[keepMessages.length - 1]];
 }
 
+/**
+ * 调用 AI 微服务的 GAN 分析接口
+ * 复用 callAiServiceFileDetection，路径为 /api/gan/anomaly
+ */
+async function callGANAnalysis(filePath) {
+  const start = Date.now();
+  try {
+    const result = await callAiServiceFileDetection('/api/gan/anomaly', filePath);
+    const elapsed = Date.now() - start;
+    logger.info(`[aiService.GAN] GAN分析完成: ${filePath} | ${elapsed}ms | is_anomaly=${result?.is_anomaly}`);
+    return result;
+  } catch (error) {
+    logger.warn(`[aiService.GAN] GAN分析失败: ${error.message}`);
+    return {
+      is_anomaly: false,
+      reconstruction_error: 0,
+      anomaly_score: 0,
+      confidence: 0,
+      model_version: 'error',
+      error: error.message
+    };
+  }
+}
+
+/**
+ * 调用 AI 微服务的 JSON 接口（非文件上传）
+ */
+async function callAiServiceJson(endpoint) {
+  try {
+    const resp = await axios.get(`${config.aiService.url}${endpoint}`, { timeout: 10000 });
+    return resp.data;
+  } catch (error) {
+    logger.warn(`[aiService.JSON] 调用 ${endpoint} 失败: ${error.message}`);
+    return { code: 1, message: error.message, data: null };
+  }
+}
+
 module.exports = {
   detectMalware,
   detectPoisoning,
@@ -1310,6 +1347,8 @@ module.exports = {
   callDeepSeek,
   searchKnowledge,
   executeTool,
+  callGANAnalysis,
+  callAiServiceJson,
   // AI 安全能力（供外部调用）
   detectPromptInjection,
   validateInput,

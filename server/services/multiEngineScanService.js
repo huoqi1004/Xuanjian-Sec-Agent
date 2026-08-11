@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const logger = require('../utils/logger');
+const { config } = require('../config');
 const { getDb } = require('../db/database');
 const aiService = require('./aiService');
 
@@ -15,6 +16,7 @@ const aiService = require('./aiService');
  * - AI恶意代码检测 (Python微服务)
  * - AI投毒检测 (Python微服务)
  * - 360病毒特征库 (本地+云端)
+ * - GAN异常检测 (Python微服务，Phase 2)
  */
 class MultiEngineScanService {
 
@@ -42,7 +44,8 @@ class MultiEngineScanService {
             this._scanAIMalware(file.path),
             this._scanAIPoisoning(file.path, hashes),
             this._scan360VirusDB(hashes),
-            this._scanFileEntropy(file.path)
+            this._scanFileEntropy(file.path),
+            this._scanGANCHomaly(file.path)   // 引擎8: GAN异常检测
         ]);
 
         // 3. 收集各引擎结果
@@ -86,8 +89,13 @@ class MultiEngineScanService {
         logger.info(`[多引擎扫描] 引擎结果汇总: ${engineLogParts.join(', ')}`);
 
         // 4. AI驱动决策仲裁
-        const decision = this._aiArbitrate(engineResultsMap, hashes, file);
+        let decision = this._aiArbitrate(engineResultsMap, hashes, file);
         logger.info(`[多引擎扫描] 仲裁结果: verdict=${decision.verdict} | maliciousScore=${decision.maliciousScore.toFixed(3)} | suspiciousScore=${decision.suspiciousScore.toFixed(3)} | confidence=${(decision.confidence * 100).toFixed(1)}% | primaryEngine=${decision.primaryEngine}`);
+
+        // 4.5 GAN 专项投票融合（Phase 2）
+        const ganDecision = this._ganVoteMerge(engineResultsMap, decision);
+        logger.info(`[GAN投票] 最终仲裁: verdict=${ganDecision.verdict} | confidence=${(ganDecision.confidence * 100).toFixed(1)}% | ganBoosted=${!!ganDecision.ganBoosted} | ganConflicted=${!!ganDecision.ganConflicted}`);
+        decision = ganDecision;
 
         // 4.5 零日威胁动态沙箱分析（当所有引擎均为 unknown 但熵值异常时触发）
         if (decision.verdict === 'clean' || decision.verdict === 'suspicious') {
@@ -512,6 +520,162 @@ class MultiEngineScanService {
     _levelDescription(level) {
         const map = { 10: '纯白', 20: '白', 30: '灰白', 40: '灰', 50: '低疑似', 60: '高疑似', 70: '恶意' };
         return map[level] || '未知';
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Phase 2: GAN 引擎（AnomalyGAN 异常检测）
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * 引擎8: GAN 异常检测
+     * 调用 ai-service Python 微服务的 /api/gan/anomaly 接口
+     * 返回 reconstruction_error, is_anomaly, confidence
+     */
+    async _scanGANCHomaly(filePath) {
+        const start = Date.now();
+        const ganConfig = config.gan;
+
+        // 配置关闭时直接跳过
+        if (!ganConfig || !ganConfig.enabled) {
+            return {
+                engine: 'GAN异常检测',
+                status: 'skipped',
+                verdict: 'unknown',
+                confidence: 0,
+                detail: 'GAN 引擎未在配置中启用 (GAN_SCAN_ENABLED=false)',
+                responseTime: Date.now() - start
+            };
+        }
+
+        // 大文件跳过（超时保护）
+        try {
+            const stat = fs.statSync(filePath);
+            if (stat.size > 5 * 1024 * 1024) {  // > 5MB 跳过
+                return {
+                    engine: 'GAN异常检测',
+                    status: 'skipped',
+                    verdict: 'unknown',
+                    confidence: 0,
+                    detail: `文件过大(${(stat.size / 1024 / 1024).toFixed(1)}MB)，跳过 GAN 分析`,
+                    responseTime: Date.now() - start
+                };
+            }
+        } catch (e) {
+            // stat 失败不影响主流程
+        }
+
+        try {
+            const result = await aiService.callGANAnalysis(filePath);
+
+            if (!result) {
+                return {
+                    engine: 'GAN异常检测',
+                    status: 'error',
+                    verdict: 'unknown',
+                    confidence: 0,
+                    detail: 'AI 服务无响应',
+                    responseTime: Date.now() - start
+                };
+            }
+
+            const reconError = parseFloat(result.reconstruction_error || 0);
+            const isAnomaly = result.is_anomaly === true;
+            const ganConfidence = parseFloat(result.confidence || 0);
+            const threshold = ganConfig.anomalyThreshold || 0.02;
+
+            let verdict, confidence, detail;
+            if (isAnomaly) {
+                verdict = 'suspicious';
+                confidence = Math.min(0.95, ganConfidence * 0.8 + 0.2);
+                detail = `GAN异常检测: 重构误差=${reconError.toFixed(6)}(阈值=${threshold}), 判定为异常`;
+            } else {
+                verdict = 'clean';
+                confidence = Math.max(0.05, 1.0 - reconError);
+                detail = `GAN异常检测: 重构误差=${reconError.toFixed(6)}(阈值=${threshold}), 判定为安全`;
+            }
+
+            logger.info(`[GAN异常检测] filePath=${filePath} | recon_error=${reconError.toFixed(6)} | verdict=${verdict} | confidence=${confidence.toFixed(4)} | elapsed=${Date.now() - start}ms`);
+
+            return {
+                engine: 'GAN异常检测',
+                status: 'completed',
+                verdict,
+                confidence,
+                detail,
+                reconstructionError: reconError,
+                ganModelVersion: result.model_version || 'unknown',
+                anomalyScore: result.anomaly_score || 0,
+                responseTime: Date.now() - start
+            };
+        } catch (error) {
+            logger.warn(`[GAN异常检测] 调用失败: ${error.message}`);
+            return {
+                engine: 'GAN异常检测',
+                status: 'error',
+                verdict: 'unknown',
+                confidence: 0,
+                detail: `GAN检测失败: ${error.message}`,
+                responseTime: Date.now() - start
+            };
+        }
+    }
+
+    /**
+     * GAN 专项投票融合
+     * 在 _aiArbitrate 之后调用，调整 verdict 和 recommendation
+     * 规则:
+     *   1. GAN异常 + 低恶意分数 → 升级为 suspicious
+     *   2. GAN异常 + 高恶意分数 → 提升 confidence
+     *   3. GAN clean + 高恶意分数 → 降级确认（误报检查）
+     *   4. GAN 不可用 → 跳过
+     */
+    _ganVoteMerge(engineResultsMap, decision) {
+        const ganConfig = config.gan;
+        const ganResult = engineResultsMap['gan_anomaly'];
+
+        // 规则4: GAN 不可用 → 直接返回
+        if (!ganResult || ganResult.status === 'skipped' || ganResult.status === 'error') {
+            logger.info('[GAN投票] GAN引擎不可用（skipped/error），跳过GAN投票逻辑');
+            return decision;
+        }
+
+        const ganAnomaly = ganResult.verdict === 'suspicious';
+        const ganConfidence = ganResult.confidence || 0;
+        const malformedScore = decision.maliciousScore || 0;
+
+        // 规则1: GAN异常 + 规则未命中（maliciousScore < 0.3）→ suspicious
+        if (ganAnomaly && malformedScore < 0.3) {
+            decision.verdict = 'suspicious';
+            decision.confidence = Math.max(decision.confidence, ganConfidence * 0.5);
+            decision.ganBoosted = true;
+            decision.ganDetail = `GAN重构误差异常(${ganResult.reconstructionError?.toFixed(6) || 'N/A'})触发升级`;
+            logger.info(`[GAN投票] 规则1触发: GAN异常 + 低恶意分数(maliciousScore=${malformedScore.toFixed(3)}) → 升级为suspicious`);
+        }
+
+        // 规则2: GAN异常 + 规则已命中（maliciousScore >= 0.3）→ 提升置信度
+        else if (ganAnomaly && malformedScore >= 0.3) {
+            const boostedConf = Math.min(0.99, decision.confidence + ganConfidence * 0.15);
+            decision.confidence = boostedConf;
+            decision.ganBoosted = true;
+            decision.ganDetail = `GAN与规则引擎双重命中，置信度提升至${(boostedConf * 100).toFixed(1)}%`;
+            logger.info(`[GAN投票] 规则2触发: GAN+规则双重命中, confidence ${decision.confidence.toFixed(3)} → ${boostedConf.toFixed(3)}`);
+        }
+
+        // 规则3: GAN clean + 规则恶意 → 降级确认
+        else if (!ganAnomaly && malformedScore >= 0.6) {
+            const maliciousEngineCount = Object.values(engineResultsMap).filter(
+                e => e.verdict === 'malicious' || e.verdict === 'poisoned'
+            ).length;
+            if (maliciousEngineCount >= 3) {
+                const reducedConf = decision.confidence * 0.9;
+                decision.confidence = reducedConf;
+                decision.ganConflicted = true;
+                decision.ganDetail = `GAN判定安全但${maliciousEngineCount}个规则引擎命中，建议人工复核`;
+                logger.info(`[GAN投票] 规则3触发: GAN与规则冲突, maliciousEngines=${maliciousEngineCount}, confidence ${(decision.confidence * 0.9).toFixed(3)}`);
+            }
+        }
+
+        return decision;
     }
 
     /**

@@ -94,6 +94,41 @@ router.post('/analyze-hash', checkPermission('GET'), auditLog('virus_analyze_has
 }));
 
 /**
+ * POST /api/virus/gan-analyze - 单独调用 GAN 异常检测
+ */
+router.post('/gan-analyze', checkPermission('POST'), auditLog('virus_gan_analyze'), asyncHandler(async (req, res) => {
+    const { filePath } = req.body;
+    if (!filePath) return fail(res, 'filePath 不能为空');
+
+    try {
+        const result = await aiService.callGANAnalysis(filePath);
+        if (!result) return fail(res, 'GAN 分析失败，AI 服务无响应');
+        return success(res, {
+            filePath,
+            is_anomaly: result.is_anomaly,
+            reconstruction_error: result.reconstruction_error,
+            anomaly_score: result.anomaly_score,
+            confidence: result.confidence,
+            model_version: result.model_version,
+        }, 'GAN 异常检测完成');
+    } catch (error) {
+        return fail(res, `GAN 检测失败: ${error.message}`);
+    }
+}));
+
+/**
+ * GET /api/virus/gan/model-status - 查询 GAN 模型状态
+ */
+router.get('/gan/model-status', checkPermission('GET'), auditLog('virus_gan_status'), asyncHandler(async (req, res) => {
+    try {
+        const status = await aiService.callAiServiceJson('/api/gan/model-status');
+        return success(res, status);
+    } catch (error) {
+        return fail(res, `查询 GAN 模型状态失败: ${error.message}`);
+    }
+}));
+
+/**
  * POST /api/virus/export-report - 导出AI查杀报告
  */
 router.post('/export-report', checkPermission('GET'), auditLog('virus_export_report'), asyncHandler(async (req, res) => {

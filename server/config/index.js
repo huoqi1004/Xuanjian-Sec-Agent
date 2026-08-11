@@ -40,6 +40,13 @@ const config = {
     cron: process.env.VIRUS_SCAN_CRON || '0 3 * * *',
     watchDirs: (process.env.VIRUS_SCAN_WATCH_DIRS || './uploads,./data').split(',').map(s => s.trim()).filter(Boolean)
   },
+  gan: {
+    enabled: process.env.GAN_SCAN_ENABLED === 'true',
+    anomalyThreshold: parseFloat(process.env.GAN_ANOMALY_THRESHOLD) || 0.02,
+    weight: parseFloat(process.env.GAN_ENGINE_WEIGHT) || 0.3,
+    timeoutMs: parseInt(process.env.GAN_SCAN_TIMEOUT_MS) || 20000,
+    fallbackToRule: process.env.GAN_FALLBACK_TO_RULE !== 'false'
+  },
   llm: {
     apiKey: process.env.LLM_API_KEY || '',
     apiBase: process.env.LLM_API_BASE || 'https://api.openai.com/v1',
