@@ -371,6 +371,32 @@ CREATE TABLE IF NOT EXISTS gan_models (
 | `/api/gan/anomaly/batch` | POST | 批量文件 GAN 检测 |
 | `/api/gan/adv-generate` | POST | 生成对抗样本（红队测试） |
 | `/api/gan/model-status` | GET | 查询 GAN 模型状态 |
+
+### Phase 2 交付清单
+
+```
+server/services/multiEngineScanService.js  新增 _scanGANCHomaly + _ganVoteMerge（+160行）
+server/services/aiService.js               新增 callGANAnalysis + callAiServiceJson
+server/config/index.js                     新增 gan 配置节点
+server/routes/virus.js                     新增 2 个 GAN API 端点
+server/test/gan_integration.test.js        6 项集成测试（规则1-4全覆盖）✅
+```
+
+### Phase 2 投票融合 4 条规则
+
+| 规则 | 触发条件 | 行为 |
+|------|---------|------|
+| 规则1 | GAN异常 + maliciousScore < 0.3 | 升级为 suspicious，设 ganBoosted=true |
+| 规则2 | GAN异常 + maliciousScore ≥ 0.3 | confidence 提升 15%，设 ganBoosted=true |
+| 规则3 | GAN clean + 恶意引擎 ≥ 3 | confidence 降级 10%，设 ganConflicted=true |
+| 规则4 | GAN 不可用（skipped/error/missing） | 跳过，维持原决策 |
+
+### Phase 2 新增 API 端点
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/virus/gan-analyze` | POST | 单独调用 GAN 异常检测 |
+| `/api/virus/gan/model-status` | GET | 查询 GAN 模型状态 |
 | `/api/gan/metrics` | GET | 查询 GAN 监控指标 |
 | `/api/gan/prompt-test` | POST | 运行 Prompt 对抗测试 |
 
@@ -436,7 +462,7 @@ torchaudio>=2.0.0     # 可选，仅用于音频异常检测
 | Phase | 状态 | 完成日期 | 提交 |
 |-------|------|---------|------|
 | Phase 1 — 基础框架 | ✅ 完成 | 2026-08-11 | `f713f14` / 标签 `v1.3.0-gan-phase1` |
-| Phase 2 — 集成推理 | 🔄 待执行 | — | — |
+| Phase 2 — 集成推理 | ✅ 完成 | 2026-08-11 | `a8e2c5f` / 标签 `v1.3.0-gan-phase2` |
 | Phase 3 — 对抗增强 | ⏳ 规划中 | — | — |
 | Phase 4 — 生产化 | ⏳ 规划中 | — | — |
 
