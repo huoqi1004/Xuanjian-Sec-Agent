@@ -1,0 +1,43 @@
+[
+  {
+    "id": "tp-001",
+    "category": "流量特征",
+    "source": "流量分析",
+    "title": "勒索软件C2通信流量特征识别",
+    "content": "勒索软件C2通信的典型流量特征：1. DNS过隧道 — 高频TXT记录查询（>100次/分钟），子域名长度异常（>30字符），查询模式规律；2. HTTPS C2 — 固定证书指纹（非证书透明度日志）、SNI域名与证书CN不匹配；3. 加密通信 — TLS 1.3仅、固定JA3指纹；4. 低频心跳 — 周期性短连接（每5-30分钟）；5. 异常时间 — 深夜/周末高频连接。检测方法：Zeek/Brute日志分析、JA3指纹聚类、DNS查询频率阈值告警。处置：封堵C2域名/IP，溯源内网感染源。",
+    "keywords": ["流量分析", "C2", "DNS隧道", "JA3", "TLS", "勒索软件", "网络流量"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/techniques/T1071/004/"],
+    "mitigation": "流量基线建立，异常DNS查询告警。"
+  },
+  {
+    "id": "tp-002",
+    "category": "流量特征",
+    "source": "流量分析",
+    "title": "SSH暴力破解流量特征",
+    "content": "SSH暴力破解的典型流量模式：1. 高频连接 — 单IP每分钟>30次SSH连接；2. 短时断开 — 每次连接<5秒即断开（密码不正确）；3. 规律性 — 连接间隔均匀（自动化脚本特征）；4. 端口漂移 — 攻击IP切换源端口；5. 失败后成功 — 大量失败后出现一次成功登录（可能是密码喷溅成功）。检测方法：日志分析(sshd日志)、网络流量聚合、IDS规则(SURICATA SSH brute force)。处置：fail2ban封禁、密钥认证、限制SSH登录来源IP。",
+    "keywords": ["SSH", "暴力破解", "brute force", "流量特征", "fail2ban", "CPE-SSH"],
+    "severity": "high",
+    "mitigation": "fail2ban、密钥认证、IP白名单。"
+  },
+  {
+    "id": "tp-003",
+    "category": "流量特征",
+    "source": "流量分析",
+    "title": "WebShell后門流量特征识别",
+    "content": "WebShell（PHP/JSP/ASPX）后门的流量特征：1. 可疑User-Agent — 包含curl/wget/python/perl/httpclient；2. 异常POST请求 — 到.php/.jsp/.aspx文件的POST请求（正常应很少）；3. 小Payload大响应 — 请求体<1KB但响应>10KB（执行系统命令）；4. 特定路径 — /wp-content/uploads/、/images/、/tmp/目录下的可疑PHP文件；5. Base64编码参数 — 请求参数含base64编码。检测方法：WAF规则、流量异常检测、文件完整性监控。处置：WebShell文件删除、源IP封禁、Web服务器日志审计。",
+    "keywords": ["WebShell", "PHP", "后门", "流量特征", "WAF", "POST请求", "base64"],
+    "severity": "high",
+    "mitigation": "WAF规则、文件完整性监控、定期Webshell扫描。"
+  },
+  {
+    "id": "tp-004",
+    "category": "流量特征",
+    "source": "流量分析",
+    "title": "勒索软件加密传播流量特征",
+    "content": "勒索软件内网传播的典型流量：1. SMB大流量 — 大量SMB连接（端口445）到多个内部主机；2. RDP异常 — 非工作时间RDP会话爆发；3. WMI远程执行 — 大量WMI进程创建事件；4. PSEXEC特征 — 管理员共享(admin$)文件传输。检测：SMB连接矩阵分析、RDP会话异常告警、WMI远程调用审计。处置：网络分段、禁用445端口外联、启用WMI远程执行日志。",
+    "keywords": ["勒索软件", "SMB", "445", "RDP", "WMI", "PSEXEC", "内网传播"],
+    "severity": "critical",
+    "mitigation": "网络分段、SMB防火墙规则、WMI日志审计。"
+  }
+]

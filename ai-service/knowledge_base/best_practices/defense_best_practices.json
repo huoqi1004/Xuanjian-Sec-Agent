@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bp-001",
+    "category": "防护最佳实践",
+    "source": "CIS Benchmark",
+    "title": "CIS Linux安全加固基准检查项",
+    "content": "CIS Linux安全加固关键配置项：1. 账户管理：禁用默认账户、密码复杂度策略（12+字符/大/小/数字/特殊）、登录失败锁定（5次失败锁定30分钟）2. 认证：禁用root SSH登录（PermitRootLogin no）、启用密钥认证、禁用空密码 3. 审计：启用auditd、配置审计规则、日志集中发送 4. 文件权限：/etc/passwd权限644、/etc/shadow权限600、/etc/sudoers权限440 5. 网络：禁用IP转发（net.ipv4.ip_forward=0）、启用SYN cookies、仅监听必要端口 6. 文件系统：/tmp独立分区、noexec选项、禁用自动挂载 7. 服务：禁用不必要的服务（telnet/rsh/rlogin）、启用防火墙(firewalld/ufw)。检测方法：cis_audit工具扫描、OpenSCAP检查。",
+    "keywords": ["CIS", "Linux", "加固", "基准", "auditd", "firewall", "权限"],
+    "severity": "medium",
+    "references": ["https://www.cisecurity.org/benchmark/linux"],
+    "mitigation": "定期CIS审计、自动化合规检查。"
+  },
+  {
+    "id": "bp-002",
+    "category": "防护最佳实践",
+    "source": "CIS Benchmark",
+    "title": "Windows域环境安全加固指南",
+    "content": "Windows域环境安全加固：1. 域策略：密码复杂度（14+字符）、密码最长使用90天、历史密码12个、账户锁定阈值5次/30分钟2. GPO安全设置：禁用Guest账户、禁用匿名SAM访问、强制智能卡登录、UAC最高级别 3. LAPS：所有计算机启用本地管理员密码解决方案 4. 受保护用户组：将高权限账户加入Protected Users组 5. 禁用SMBv1、启用SMB签名 6. 启用高级审计策略：登录事件、对象访问、策略更改、详细跟踪 7. 定期运行Microsoft Security Compliance Toolkit检查。检测方法：Security Advisor扫描、GPO审计。",
+    "keywords": ["Windows", "域安全", "GPO", "LAPS", "CIS", "UAC", "SMB签名"],
+    "severity": "medium",
+    "references": ["https://www.cisecurity.org/benchmark/microsoft_windows"],
+    "mitigation": "定期GPO审计、LAPS部署、安全基线扫描。"
+  },
+  {
+    "id": "bp-003",
+    "category": "防护最佳实践",
+    "source": "最佳实践",
+    "title": "网络安全纵深防御架构设计",
+    "content": "纵深防御架构设计原则：1. 边界防护：下一代防火墙（NGFW）+ WAF + DDoS防护 2. 网络分段：DMZ/内网/数据库/管理网隔离、VLAN划分、ACL控制 3. 端点防护：EDR覆盖100%终端、应用白名单、卷影副本保护 4. 身份认证：MFA全覆盖、最小权限原则、特权账户PAM管理 5. 安全监控：SIEM集中日志+UEBA异常检测+SOAR自动化响应 6. 数据保护：敏感数据加密（传输TLS1.3+存储AES-256）、DLP策略、数据分类分级 7. 漏洞管理：定期扫描+优先修复+补丁管理流程。检测：网络流量异常、终端行为异常、身份异常。",
+    "keywords": ["纵深防御", "网络安全", "分段", "EDR", "SIEM", "零信任", "DMZ"],
+    "severity": "medium",
+    "mitigation": "定期安全架构评审、渗透测试。"
+  },
+  {
+    "id": "bp-004",
+    "category": "防护最佳实践",
+    "source": "最佳实践",
+    "title": "安全日志审计与告警规则设计",
+    "content": "安全日志审计关键规则：1. 登录异常：非工作时间登录、异地登录、多次失败后成功登录、特权账户异常登录 2. 进程异常：PowerShell无GUI运行、加密压缩工具（7zip/WinRAR）执行、敏感进程（mimikatz/procdump）执行 3. 网络异常：高频DNS查询（DNS隧道）、异常外部连接（Tor出口IP）、内网扫描行为 4. 文件异常：可执行文件写入启动目录、注册表Run项修改、计划任务创建、WMI事件订阅器创建 5. 账户异常：新管理员账户创建、密码重置、账户启用/禁用 6. 权限异常：提权尝试、UAC绕过、SE_DEBUG_NAME权限获取。告警阈值：高危告警实时推送，中危告警5分钟聚合，低危告警每日汇总。",
+    "keywords": ["日志审计", "SIEM", "告警规则", "登录异常", "进程异常", "提权"],
+    "severity": "medium",
+    "mitigation": "集中日志存储、自动化告警、SOAR响应。"
+  }
+]

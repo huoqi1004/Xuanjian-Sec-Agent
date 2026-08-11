@@ -94,14 +94,17 @@ def health_check():
 
 @app.route('/api/knowledge/search', methods=['POST'])
 def knowledge_search():
-    """知识库向量检索（RAG）：POST { query, top_k? }"""
+    """知识库混合检索（RAG）：POST { query, top_k?, category?, severity? }"""
     try:
         body = request.get_json(silent=True) or {}
         query = (body.get('query') or '').strip()
         if not query:
             return jsonify({'code': 1, 'message': 'query 不能为空', 'data': []})
         top_k = int(body.get('top_k') or 5)
-        results = knowledge_base.search(query, top_k=min(max(top_k, 1), 20))
+        category = body.get('category') or None
+        severity = body.get('severity') or None
+        results = knowledge_base.search(query, top_k=min(max(top_k, 1), 20),
+                                         category=category, severity=severity)
         return jsonify({'code': 0, 'message': '检索成功', 'data': results})
     except Exception as e:  # noqa: BLE001
         logger.error('知识库检索失败: %s', e)
@@ -110,16 +113,39 @@ def knowledge_search():
 
 @app.route('/api/knowledge', methods=['GET'])
 def knowledge_list():
-    """知识库条目列表：GET ?category=&limit=&offset="""
+    """知识库条目列表：GET ?category=&severity=&limit=&offset="""
     try:
         category = request.args.get('category') or None
+        severity = request.args.get('severity') or None
         limit = int(request.args.get('limit') or 100)
         offset = int(request.args.get('offset') or 0)
-        items, total = knowledge_base.list_items(category=category, limit=limit, offset=offset)
+        items, total = knowledge_base.list_items(category=category, severity=severity, limit=limit, offset=offset)
         return jsonify({'code': 0, 'message': '获取成功', 'data': {'items': items, 'total': total}})
     except Exception as e:  # noqa: BLE001
         logger.error('知识库列表失败: %s', e)
         return jsonify({'code': 1, 'message': f'获取失败: {e}', 'data': None})
+
+
+@app.route('/api/knowledge/stats', methods=['GET'])
+def knowledge_stats():
+    """知识库统计信息"""
+    try:
+        stats = knowledge_base.get_stats()
+        return jsonify({'code': 0, 'message': '统计成功', 'data': stats})
+    except Exception as e:  # noqa: BLE001
+        logger.error('知识库统计失败: %s', e)
+        return jsonify({'code': 1, 'message': f'统计失败: {e}', 'data': None})
+
+
+@app.route('/api/knowledge/sync', methods=['POST'])
+def knowledge_sync():
+    """重新扫描知识库目录并增量更新索引：POST {}"""
+    try:
+        result = knowledge_base.sync_from_directory()
+        return jsonify({'code': 0, 'message': '同步完成', 'data': result})
+    except Exception as e:  # noqa: BLE001
+        logger.error('知识库同步失败: %s', e)
+        return jsonify({'code': 1, 'message': f'同步失败: {e}', 'data': None})
 
 
 def save_upload_to_temp(file, prefix):

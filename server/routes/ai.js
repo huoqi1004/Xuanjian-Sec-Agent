@@ -434,6 +434,31 @@ router.get('/knowledge/docs', async (req, res) => {
   }
 });
 
+// ── 威胁知识库管理 ─────────────────────────────────────────
+router.get('/knowledge/stats', async (req, res) => {
+  try {
+    const axios = require('axios');
+    const { config } = require('../config');
+    const resp = await axios.get(`${config.aiService.url}/api/knowledge/stats`, { timeout: 5000 });
+    res.json({ code: 0, message: '统计成功', data: resp.data?.data });
+  } catch (err) {
+    logger.warn('[RAG] 知识库统计请求失败（AI服务不可用）:', err.message.substring(0, 100));
+    res.status(500).json({ code: -1, message: '统计失败（AI服务不可用）' });
+  }
+});
+
+router.post('/knowledge/sync', auditLog('kb_sync'), async (req, res) => {
+  try {
+    const axios = require('axios');
+    const { config } = require('../config');
+    const resp = await axios.post(`${config.aiService.url}/api/knowledge/sync`, {}, { timeout: 15000 });
+    res.json({ code: 0, message: '同步成功', data: resp.data?.data });
+  } catch (err) {
+    logger.error('知识库同步失败:', err.message);
+    res.status(500).json({ code: -1, message: '同步失败: ' + err.message });
+  }
+});
+
 // ── Phase 4: 威胁情报 LLM 融合 ──────────────────────────────
 router.post('/threat-fusion/sync', auditLog('threat_fusion_sync'), async (req, res) => {
   try {

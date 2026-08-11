@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-08-11T15:40:08.912685Z",
+  "total_items": 52,
+  "categories": {
+    "CVE": 3,
+    "合规": 4,
+    "最佳实践": 3,
+    "威胁情报": 3,
+    "防护最佳实践": 4,
+    "CVE漏洞": 9,
+    "威胁指标": 4,
+    "应急响应": 4,
+    "恶意软件": 8,
+    "攻击战术": 6,
+    "流量特征": 4
+  },
+  "severities": {
+    "critical": 18,
+    "high": 26,
+    "medium": 8
+  },
+  "sources": {
+    "security_knowledge.json": 13,
+    "CIS Benchmark": 2,
+    "最佳实践": 6,
+    "NVD": 9,
+    "威胁情报聚合": 5,
+    "malware_families\\ransomware_families.json": 7,
+    "MITRE ATT&CK": 6,
+    "流量分析": 4
+  }
+}

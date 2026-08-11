@@ -1,0 +1,1306 @@
+{
+  "version": "1.0",
+  "generated_at": "2026-08-11T15:40:08.912685Z",
+  "total_items": 52,
+  "categories": {
+    "CVE": 3,
+    "合规": 4,
+    "最佳实践": 3,
+    "威胁情报": 3,
+    "防护最佳实践": 4,
+    "CVE漏洞": 9,
+    "威胁指标": 4,
+    "应急响应": 4,
+    "恶意软件": 8,
+    "攻击战术": 6,
+    "流量特征": 4
+  },
+  "severities": {
+    "critical": 18,
+    "high": 26,
+    "medium": 8
+  },
+  "sources": {
+    "security_knowledge.json": 13,
+    "CIS Benchmark": 2,
+    "最佳实践": 6,
+    "NVD": 9,
+    "威胁情报聚合": 5,
+    "malware_families\\ransomware_families.json": 7,
+    "MITRE ATT&CK": 6,
+    "流量分析": 4
+  },
+  "items": [
+    {
+      "id": "kb-001",
+      "category": "CVE",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "CVE-2024-3094 XZ Utils后门漏洞",
+      "content": "XZ Utils 5.6.0和5.6.1版本中存在恶意后门代码，攻击者通过供应链攻击注入恶意代码，可在SSH认证过程中远程执行代码。影响范围：使用liblzma的系统。修复方案：降级到XZ Utils 5.4.x版本。严重等级：严重(10.0)。",
+      "keywords": [
+        "XZ",
+        "后门",
+        "供应链攻击",
+        "SSH",
+        "liblzma"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.904345",
+      "hash": "aa36924aa9f24bc8"
+    },
+    {
+      "id": "kb-002",
+      "category": "CVE",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "CVE-2024-21762 FortiOS越界写入漏洞",
+      "content": "Fortinet FortiOS SSL VPN组件存在越界写入漏洞(CVE-2024-21762)，允许未经身份验证的远程攻击者通过特制HTTP请求执行任意代码。CVSS评分9.8。修复方案：升级到FortiOS最新版本。临时缓解：禁用SSL VPN。",
+      "keywords": [
+        "FortiOS",
+        "SSL VPN",
+        "RCE",
+        "越界写入"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.904984",
+      "hash": "b3339acc43e8cf93"
+    },
+    {
+      "id": "kb-003",
+      "category": "合规",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "等保2.0安全通信网络要求",
+      "content": "等保2.0三级要求：通信传输应采用密码技术进行完整性保护和保密性保护。应采用校验技术或密码技术保证通信过程中数据的完整性。应采用密码技术保证通信过程中数据的保密性。网络边界应部署访问控制设备并启用访问控制策略。",
+      "keywords": [
+        "等保2.0",
+        "安全通信",
+        "加密",
+        "访问控制"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905009",
+      "hash": "db298a6aeea1f349"
+    },
+    {
+      "id": "kb-004",
+      "category": "最佳实践",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "Linux服务器安全加固最佳实践",
+      "content": "1.禁用root远程登录(PermitRootLogin no) 2.使用SSH密钥认证替代密码 3.配置fail2ban防止暴力破解 4.定期更新系统补丁 5.配置防火墙仅开放必要端口 6.启用SELinux/AppArmor 7.配置日志审计 8.定期备份关键数据",
+      "keywords": [
+        "Linux",
+        "安全加固",
+        "SSH",
+        "防火墙",
+        "fail2ban"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905027",
+      "hash": "df5e3d2badf5c667"
+    },
+    {
+      "id": "kb-005",
+      "category": "威胁情报",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "APT攻击常见TTPs",
+      "content": "高级持续性威胁(APT)常见战术技术模式：初始访问-钓鱼邮件/供应链攻击；持久化-计划任务/注册表/启动项；权限提升-内核漏洞/提权工具；横向移动-Pass-the-Hash/RDP/WMI；数据渗出-DNS隧道/加密通道。防御建议：网络分段、行为监控、最小权限原则。",
+      "keywords": [
+        "APT",
+        "TTPs",
+        "横向移动",
+        "权限提升",
+        "钓鱼"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905039",
+      "hash": "3a7f683718634b3c"
+    },
+    {
+      "id": "kb-006",
+      "category": "合规",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "CIS Controls v8关键安全控制",
+      "content": "CIS Controls v8包含18个控制域：清单和资产控制、软件资产管理、数据资产管理、安全配置管理、账户管理、访问控制管理、持续漏洞管理、审计日志管理、邮件和网页安全、恶意软件防御、数据恢复、网络基础设施管理、网络监控和防御、安全意识培训、服务提供商管理、应用软件安全、事故响应管理、渗透测试。",
+      "keywords": [
+        "CIS",
+        "安全控制",
+        "最佳实践",
+        "合规"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905049",
+      "hash": "e7d8cbf763eb58b4"
+    },
+    {
+      "id": "kb-007",
+      "category": "最佳实践",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "恶意代码分析常用技术",
+      "content": "静态分析：PE文件结构分析、导入表检查、字符串提取、熵值分析、反汇编。动态分析：沙箱执行、API监控、网络行为分析、注册表监控。机器学习检测：基于API调用序列、基于N-gram、基于控制流图、基于深度学习(Transformer/CNN)。多引擎协同：哈希匹配+AI模型+行为分析。",
+      "keywords": [
+        "恶意代码",
+        "静态分析",
+        "动态分析",
+        "沙箱",
+        "机器学习"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905065",
+      "hash": "13005898824d2980"
+    },
+    {
+      "id": "kb-008",
+      "category": "CVE",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "Log4Shell漏洞(CVE-2021-44228)",
+      "content": "Apache Log4j2存在JNDI注入漏洞，攻击者可通过构造恶意日志消息实现远程代码执行。影响范围极广，影响所有使用Log4j 2.0-2.14.1的Java应用。修复方案：升级到Log4j 2.17.1+。临时缓解：设置系统属性log4j2.formatMsgNoLookups=true。",
+      "keywords": [
+        "Log4j",
+        "JNDI",
+        "RCE",
+        "Java"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905075",
+      "hash": "55efae77764213f4"
+    },
+    {
+      "id": "kb-009",
+      "category": "合规",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "等保2.0 GB/T 22239-2019 安全通用要求",
+      "content": "等级保护2.0安全通用要求包括安全物理环境、安全通信网络、安全区域边界、安全计算环境、安全管理中心五个技术层面，以及安全管理制度、安全管理机构、安全管理人员、安全建设管理、安全运维管理五个管理层面。第三级系统要求：身份鉴别（双因素/复杂度）、访问控制（最小权限）、安全审计（审计覆盖）、入侵防范、恶意代码防范、数据保密性、数据完整性、可信验证、数据备份恢复。",
+      "keywords": [
+        "等保2.0",
+        "GB/T 22239",
+        "等级保护",
+        "三级",
+        "安全要求"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905088",
+      "hash": "f2f740119dcc29c7"
+    },
+    {
+      "id": "kb-010",
+      "category": "合规",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "CIS Benchmark SSH 安全配置",
+      "content": "CIS基准SSH加固要求：1.禁用root直接登录(PermitRootLogin no) 2.设置协议版本2(Protocol 2) 3.禁用空密码登录(PermitEmptyPasswords no) 4.设置登录超时(ClientAliveInterval 300) 5.限制最大认证次数(MaxAuthTries 4) 6.禁用X11转发 7.使用密钥认证 8.配置AllowUsers限制可登录用户。违规风险：暴力破解、未授权访问、中间人攻击。",
+      "keywords": [
+        "CIS",
+        "SSH",
+        "加固",
+        "PermitRootLogin",
+        "基线"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905102",
+      "hash": "216b88e272f7fb3c"
+    },
+    {
+      "id": "kb-011",
+      "category": "威胁情报",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "暴力破解攻击检测与处置",
+      "content": "暴力破解特征：短时间内多次认证失败（如SSH/RDP/Web登录）、同一来源IP高频请求、失败后成功登录。检测指标：认证失败次数、失败来源IP聚合、时间窗口统计。处置建议：1.启用fail2ban自动封禁(5次失败后封禁30分钟) 2.禁用root远程登录 3.启用账号锁定策略(5次失败锁定15分钟) 4.限制来源IP白名单 5.部署多因素认证 6.监控成功登录后的异常行为。",
+      "keywords": [
+        "暴力破解",
+        "brute force",
+        "fail2ban",
+        "账号锁定",
+        "处置"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905116",
+      "hash": "c45d78f822a25a98"
+    },
+    {
+      "id": "kb-012",
+      "category": "威胁情报",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "勒索软件应急处置流程",
+      "content": "勒索软件事件处置：1.立即隔离受影响主机（断网/断开存储） 2.保护证据（保留日志、加密样本、支付赎金沟通记录） 3.确定感染范围（扫描内网横向传播） 4.查找加密密钥/解密工具 5.从可信备份恢复数据 6.排查并封堵初始入口（钓鱼/漏洞/RDP暴露） 7.加固并轮换所有凭据 8.复盘并更新应急响应预案。注意：不建议支付赎金。",
+      "keywords": [
+        "勒索软件",
+        "ransomware",
+        "应急响应",
+        "隔离",
+        "备份恢复"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905130",
+      "hash": "c656f67f646879a8"
+    },
+    {
+      "id": "kb-013",
+      "category": "最佳实践",
+      "source": "security_knowledge.json",
+      "source_file": "security_knowledge.json",
+      "title": "开放端口风险与收敛建议",
+      "content": "常见服务端口风险：22/SSH暴露易遭暴力破解、3306/MySQL直接暴露可导致未授权访问、6379/Redis未授权、3389/RDP暴露易被爆破、445/SMB易受勒索软件利用。收敛建议：1.仅开放业务必需端口 2.数据库/管理端口仅内网可达 3.公网访问加WAF/CDN 4.启用访问控制白名单 5.定期端口扫描核查漂移 6.高危端口变更审批留痕。",
+      "keywords": [
+        "端口",
+        "开放端口",
+        "暴露",
+        "收敛",
+        "风险"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "",
+      "collected_at": "2026-08-11T15:40:08.905141",
+      "hash": "0432c7a39ba14c4d"
+    },
+    {
+      "id": "bp-001",
+      "category": "防护最佳实践",
+      "source": "CIS Benchmark",
+      "source_file": "best_practices\\defense_best_practices.json",
+      "title": "CIS Linux安全加固基准检查项",
+      "content": "CIS Linux安全加固关键配置项：1. 账户管理：禁用默认账户、密码复杂度策略（12+字符/大/小/数字/特殊）、登录失败锁定（5次失败锁定30分钟）2. 认证：禁用root SSH登录（PermitRootLogin no）、启用密钥认证、禁用空密码 3. 审计：启用auditd、配置审计规则、日志集中发送 4. 文件权限：/etc/passwd权限644、/etc/shadow权限600、/etc/sudoers权限440 5. 网络：禁用IP转发（net.ipv4.ip_forward=0）、启用SYN cookies、仅监听必要端口 6. 文件系统：/tmp独立分区、noexec选项、禁用自动挂载 7. 服务：禁用不必要的服务（telnet/rsh/rlogin）、启用防火墙(firewalld/ufw)。检测方法：cis_audit工具扫描、OpenSCAP检查。",
+      "keywords": [
+        "CIS",
+        "Linux",
+        "加固",
+        "基准",
+        "auditd",
+        "firewall",
+        "权限"
+      ],
+      "severity": "medium",
+      "references": [
+        "https://www.cisecurity.org/benchmark/linux"
+      ],
+      "ttps": [],
+      "mitigation": "定期CIS审计、自动化合规检查。",
+      "collected_at": "2026-08-11T15:40:08.906359",
+      "hash": "6dfdd9fcbb0086f0"
+    },
+    {
+      "id": "bp-002",
+      "category": "防护最佳实践",
+      "source": "CIS Benchmark",
+      "source_file": "best_practices\\defense_best_practices.json",
+      "title": "Windows域环境安全加固指南",
+      "content": "Windows域环境安全加固：1. 域策略：密码复杂度（14+字符）、密码最长使用90天、历史密码12个、账户锁定阈值5次/30分钟2. GPO安全设置：禁用Guest账户、禁用匿名SAM访问、强制智能卡登录、UAC最高级别 3. LAPS：所有计算机启用本地管理员密码解决方案 4. 受保护用户组：将高权限账户加入Protected Users组 5. 禁用SMBv1、启用SMB签名 6. 启用高级审计策略：登录事件、对象访问、策略更改、详细跟踪 7. 定期运行Microsoft Security Compliance Toolkit检查。检测方法：Security Advisor扫描、GPO审计。",
+      "keywords": [
+        "Windows",
+        "域安全",
+        "GPO",
+        "LAPS",
+        "CIS",
+        "UAC",
+        "SMB签名"
+      ],
+      "severity": "medium",
+      "references": [
+        "https://www.cisecurity.org/benchmark/microsoft_windows"
+      ],
+      "ttps": [],
+      "mitigation": "定期GPO审计、LAPS部署、安全基线扫描。",
+      "collected_at": "2026-08-11T15:40:08.906404",
+      "hash": "6e04b275239791d1"
+    },
+    {
+      "id": "bp-003",
+      "category": "防护最佳实践",
+      "source": "最佳实践",
+      "source_file": "best_practices\\defense_best_practices.json",
+      "title": "网络安全纵深防御架构设计",
+      "content": "纵深防御架构设计原则：1. 边界防护：下一代防火墙（NGFW）+ WAF + DDoS防护 2. 网络分段：DMZ/内网/数据库/管理网隔离、VLAN划分、ACL控制 3. 端点防护：EDR覆盖100%终端、应用白名单、卷影副本保护 4. 身份认证：MFA全覆盖、最小权限原则、特权账户PAM管理 5. 安全监控：SIEM集中日志+UEBA异常检测+SOAR自动化响应 6. 数据保护：敏感数据加密（传输TLS1.3+存储AES-256）、DLP策略、数据分类分级 7. 漏洞管理：定期扫描+优先修复+补丁管理流程。检测：网络流量异常、终端行为异常、身份异常。",
+      "keywords": [
+        "纵深防御",
+        "网络安全",
+        "分段",
+        "EDR",
+        "SIEM",
+        "零信任",
+        "DMZ"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "定期安全架构评审、渗透测试。",
+      "collected_at": "2026-08-11T15:40:08.906428",
+      "hash": "d69b3e46bf02ca83"
+    },
+    {
+      "id": "bp-004",
+      "category": "防护最佳实践",
+      "source": "最佳实践",
+      "source_file": "best_practices\\defense_best_practices.json",
+      "title": "安全日志审计与告警规则设计",
+      "content": "安全日志审计关键规则：1. 登录异常：非工作时间登录、异地登录、多次失败后成功登录、特权账户异常登录 2. 进程异常：PowerShell无GUI运行、加密压缩工具（7zip/WinRAR）执行、敏感进程（mimikatz/procdump）执行 3. 网络异常：高频DNS查询（DNS隧道）、异常外部连接（Tor出口IP）、内网扫描行为 4. 文件异常：可执行文件写入启动目录、注册表Run项修改、计划任务创建、WMI事件订阅器创建 5. 账户异常：新管理员账户创建、密码重置、账户启用/禁用 6. 权限异常：提权尝试、UAC绕过、SE_DEBUG_NAME权限获取。告警阈值：高危告警实时推送，中危告警5分钟聚合，低危告警每日汇总。",
+      "keywords": [
+        "日志审计",
+        "SIEM",
+        "告警规则",
+        "登录异常",
+        "进程异常",
+        "提权"
+      ],
+      "severity": "medium",
+      "references": [],
+      "ttps": [],
+      "mitigation": "集中日志存储、自动化告警、SOAR响应。",
+      "collected_at": "2026-08-11T15:40:08.906450",
+      "hash": "3c70d5f663d91a3d"
+    },
+    {
+      "id": "cve-2024-3094",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-3094 XZ Utils 供应链后门（liblzma SSH 后门）",
+      "content": "XZ Utils 5.6.0和5.6.1版本的CI/CD流水线被攻击者篡改，恶意代码注入liblzma库。攻击者通过供应链攻击在SSH服务器认证时获取root权限。攻击链：篡改GitHub CI脚本→篡改源码中的backdoor()函数→注入/liblzma/.git/hooks/pre-push.py→植入后门逻辑。影响：所有使用XZ Utils 5.6.0-5.6.1的系统，包括Linux发行版（openSUSE, Debian, Ubuntu, Arch等）。CVSS评分9.8。检测方法：1. 检查xz版本是否5.6.0-5.6.1 2. 验证liblzma库签名 3. 监控SSH认证时的异常回调用。处置：降级到5.4.x，重新编译liblzma，检查系统是否被植入持久化后门。",
+      "keywords": [
+        "CVE-2024-3094",
+        "XZ Utils",
+        "liblzma",
+        "供应链攻击",
+        "SSH后门",
+        "root权限",
+        "CI/CD篡改"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-3094",
+        "https://github.com/tukaani-project/xz/backdoor"
+      ],
+      "ttps": [
+        "T1195.002-供应链组件入侵",
+        "T1059-命令与脚本解释器"
+      ],
+      "mitigation": "立即升级到XZ Utils 5.4.x或禁用liblzma。检查系统是否存在持久化后门。",
+      "collected_at": "2026-08-11T15:40:08.907733",
+      "hash": "cc84a0c0f8b2b79a"
+    },
+    {
+      "id": "cve-2024-21762",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-21762 FortiOS/FortiProxy SSL VPN 越界写入RCE",
+      "content": "Fortinet FortiOS和FortiProxy SSL VPN组件存在越界写入漏洞（CVE-2024-21762），CVSS 9.8。攻击者通过构造特制的HTTPS请求可触发远程代码执行。该漏洞在wildfire漏洞库中被列为高优先级利用。攻击者在2024年2月已通过Exploit-as-a-Service形式出售。影响范围：FortiOS 7.4.0-7.4.3、7.2.0-7.2.4、7.0.0-7.0.13、6.4.0-6.4.14。检测方法：1. 检查FortiOS版本是否在受影响范围 2. 监控SSL VPN日志异常请求 3. 检测非常规POST请求到/fpac。处置：升级到最新版本（7.4.4+、7.2.5+、7.0.14+、6.4.15+）。临时缓解：禁用SSL VPN或仅允许特定IP访问。",
+      "keywords": [
+        "CVE-2024-21762",
+        "FortiOS",
+        "SSL VPN",
+        "RCE",
+        "越界写入",
+        "Fortinet"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-21762",
+        "https://www.fortiguard.com/psirt/FG-IR-24-007"
+      ],
+      "ttps": [
+        "T1190-利用公开漏洞",
+        "T1078-有效账户"
+      ],
+      "mitigation": "升级至FortiOS 7.4.4+或禁用SSL VPN。监控/fpac路径访问。",
+      "collected_at": "2026-08-11T15:40:08.907752",
+      "hash": "12e25de78dfd2a1a"
+    },
+    {
+      "id": "cve-2024-23633",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-23633 Palo Alto PAN-OS 越界读取信息泄露",
+      "content": "Palo Alto Networks PAN-OS 10.2.0至10.2.3存在越界读取漏洞，允许未经认证的攻击者通过构造恶意SSL/TLS握读取服务器内存中的敏感数据。CVSS评分7.5。影响：PAN-OS 10.2.0-10.2.3的所有设备。攻击者可通过TLS ClientHello消息触发越界读取。检测方法：1. 检查PAN-OS版本 2. 监控TLS握手异常。处置：升级到11.0.8-h2或10.2.4-h2。",
+      "keywords": [
+        "CVE-2024-23633",
+        "Palo Alto",
+        "PAN-OS",
+        "信息泄露",
+        "TLS",
+        "越界读取"
+      ],
+      "severity": "high",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-23633"
+      ],
+      "ttps": [],
+      "mitigation": "升级至PAN-OS 10.2.4-h2或11.0.8-h2。",
+      "collected_at": "2026-08-11T15:40:08.907765",
+      "hash": "629068fbf37d3be8"
+    },
+    {
+      "id": "cve-2024-3400",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-3400 Palo Alto PAN-OS IP处理逻辑错误RCE",
+      "content": "Palo Alto PAN-OS 11.0.0至11.0.1存在IP处理逻辑错误，攻击者可利用iProfile中的特制SCTP流实现未授权远程代码执行。CVSS评分9.8。2024年4月已在wildfire漏洞库中记录实际利用。影响：PAN-OS 11.0.0-11.0.1。检测方法：监控PAN-OS iProfile配置中的异常SCTP流。处置：升级到11.0.2-h1或10.2.7-h4。",
+      "keywords": [
+        "CVE-2024-3400",
+        "Palo Alto",
+        "PAN-OS",
+        "RCE",
+        "SCTP",
+        "iProfile"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-3400"
+      ],
+      "ttps": [],
+      "mitigation": "升级至PAN-OS 11.0.2-h1或禁用iProfile。",
+      "collected_at": "2026-08-11T15:40:08.907774",
+      "hash": "0121ae7770de5c3d"
+    },
+    {
+      "id": "cve-2024-1972",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-1972 imgcalc DLL侧加载RCE",
+      "content": "imgcalc（ImageMagick DLL加载器）存在DLL侧加载漏洞，允许攻击者通过替换System32目录下的DLL实现未授权远程代码执行。攻击路径：控制C:\\Windows\\System32\\imgcalc.dll→重启系统触发DLL搜索顺序劫持。CVSS评分8.6。检测方法：1. 检查System32目录下imgcalc.dll是否存在 2. 监控DLL加载事件（Event ID 4689）。处置：1. 删除恶意DLL 2. 运行系统文件检查器sfc /scannow 3. 检查是否植入持久化机制。",
+      "keywords": [
+        "CVE-2024-1972",
+        "DLL侧加载",
+        "System32",
+        "imgcalc",
+        "RCE",
+        "持久化"
+      ],
+      "severity": "high",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-1972"
+      ],
+      "ttps": [],
+      "mitigation": "删除System32\\imgcalc.dll，运行sfc /scannow。",
+      "collected_at": "2026-08-11T15:40:08.907783",
+      "hash": "f40a884729b52cb2"
+    },
+    {
+      "id": "cve-2024-0553",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-0553 Oracle Java SE 远程代码执行",
+      "content": "Oracle Java SE 21.0.1之前版本存在远程代码执行漏洞。攻击者可通过特制的Java RMI调用实现未授权代码执行。CVSS评分7.2。影响所有使用旧版Java SE的系统。处置：升级到Java SE 21.0.1或更高版本。",
+      "keywords": [
+        "CVE-2024-0553",
+        "Oracle Java",
+        "RMI",
+        "RCE",
+        "远程代码执行"
+      ],
+      "severity": "high",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-0553"
+      ],
+      "ttps": [],
+      "mitigation": "升级到Oracle Java SE 21.0.1+。",
+      "collected_at": "2026-08-11T15:40:08.907794",
+      "hash": "1ca8b8fc55986a56"
+    },
+    {
+      "id": "cve-2023-49662",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2023-49662 Citrix ADC/netScaler路径遍历RCE",
+      "content": "Citrix ADC和NetScaler Gateway存在路径遍历漏洞，攻击者可通过构造特制HTTP请求遍历文件系统并执行远程代码。CVSS评分9.8。这是继CVE-2023-24489之后的第二个远程代码执行漏洞。影响：Citrix ADC 13.1-13.1.3.46、13.0-13.0.56.30、12.1-12.1.51.209、12.0-12.0.58.34。检测方法：1. 检查Citrix ADC版本 2. 监控/webui/路径访问 3. 检查系统是否存在异常进程。处置：升级到13.1-73.39或13.0-70.72。",
+      "keywords": [
+        "CVE-2023-49662",
+        "Citrix",
+        "ADC",
+        "NetScaler",
+        "路径遍历",
+        "RCE"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2023-49662"
+      ],
+      "ttps": [],
+      "mitigation": "升级至Citrix ADC最新版本。检查/webui/路径访问日志。",
+      "collected_at": "2026-08-11T15:40:08.907802",
+      "hash": "00803a43c1195844"
+    },
+    {
+      "id": "cve-2023-36416",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2023-36416 Zoho ManageEngine Desktop Central路径遍历",
+      "content": "Zoho ManageEngine Desktop Central存在路径遍历漏洞，允许经过身份验证的攻击者读取服务器文件并执行任意代码。CVSS评分8.1。攻击者可通过管理界面的文件上传功能遍历目录。检测方法：1. 检查Desktop Central版本 2. 监控文件上传API调用。处置：升级到1120版本或更高。",
+      "keywords": [
+        "CVE-2023-36416",
+        "Zoho",
+        "ManageEngine",
+        "路径遍历",
+        "RCE"
+      ],
+      "severity": "high",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2023-36416"
+      ],
+      "ttps": [],
+      "mitigation": "升级至Desktop Central 1120+。",
+      "collected_at": "2026-08-11T15:40:08.907810",
+      "hash": "e24c10a1ceeb4443"
+    },
+    {
+      "id": "cve-2024-27198",
+      "category": "CVE漏洞",
+      "source": "NVD",
+      "source_file": "cve\\critical_cves_2024.json",
+      "title": "CVE-2024-27198 Windows TBS驱动程序信息泄露",
+      "content": "Microsoft Windows TBS（Trusted Platform Module Services）驱动程序存在信息泄露漏洞，攻击者可通过本地提权获取内核内存信息。CVSS评分7.8。影响Windows 10/11所有版本。检测方法：1. 监控本地提权尝试 2. 检查TBS服务异常。处置：安装Windows安全更新2024年4月补丁。",
+      "keywords": [
+        "CVE-2024-27198",
+        "Windows",
+        "TBS",
+        "信息泄露",
+        "本地提权"
+      ],
+      "severity": "high",
+      "references": [
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-27198"
+      ],
+      "ttps": [],
+      "mitigation": "安装Windows安全更新。",
+      "collected_at": "2026-08-11T15:40:08.907844",
+      "hash": "2ce1d70d58c40420"
+    },
+    {
+      "id": "ioc-001",
+      "category": "威胁指标",
+      "source": "威胁情报聚合",
+      "source_file": "iocs\\known_iocs.json",
+      "title": "LockBit 3.0 已知IoC集合",
+      "content": "LockBit 3.0勒索软件已知指标集合：C2域名模式 *.lockbit.onion（Tor隐藏服务）、*.lockbit.com、*.lockbit.org。恶意IP段：23.227.38.*（Cloudflare CDN滥用）、45.153.160.*、185.220.101.*（Tor出口节点）。哈希特征：beacon DLL哈希常含9f1a、a9c2等特征前缀。持久化：注册表 Run 键 HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\WindowsDefender。检测方法：DNS查询lockbit域名、网络连接异常IP、注册表Run项异常。",
+      "keywords": [
+        "LockBit",
+        "IoC",
+        "C2",
+        "域名",
+        "哈希",
+        "ransomware",
+        "Tor"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://www.cisa.gov/lockbit-ransomware"
+      ],
+      "ttps": [],
+      "mitigation": "网络层DNS过滤lockbit域名，终端层检测已知哈希。",
+      "collected_at": "2026-08-11T15:40:08.908649",
+      "hash": "0bf3278a88bb2691"
+    },
+    {
+      "id": "ioc-002",
+      "category": "威胁指标",
+      "source": "威胁情报聚合",
+      "source_file": "iocs\\known_iocs.json",
+      "title": "APT29/Cozy Bear 已知TTPs和IoC",
+      "content": "APT29（Cozy Bear/长春花）是俄罗斯情报机构关联的高级威胁组织。常用技术：SUNBURST后门（SolarWinds供应链攻击）、XZ Utils后门（CVE-2024-3094）、C2过DNS TXT记录（TXT查询*.c2.example.com）。IoC：恶意域名*.sunburst-update.com、*.globe7.com。证书指纹：SHA256 F8:0E:FE:8D:... 等。检测方法：监控异常DNS TXT查询、检测太阳burst安装痕迹（WMI事件消费者）。处置：检查SolarWinds Orion安装、搜索WMI永久事件订阅器。",
+      "keywords": [
+        "APT29",
+        "Cozy Bear",
+        "SUNBURST",
+        "SolarWinds",
+        "DNS TXT",
+        "C2",
+        "供应链"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://www.cisa.gov/apt29-indicators"
+      ],
+      "ttps": [],
+      "mitigation": "SolarWinds补丁、DNS监控、WMI审计。",
+      "collected_at": "2026-08-11T15:40:08.908678",
+      "hash": "bbd4bf6dd5feea4c"
+    },
+    {
+      "id": "ioc-003",
+      "category": "威胁指标",
+      "source": "威胁情报聚合",
+      "source_file": "iocs\\known_iocs.json",
+      "title": "Emotet 已知IOC与检测指标",
+      "content": "Emotet恶意软件已知指标：钓鱼邮件主题模式（invoice, payment, delivery, shipping）；恶意附件哈希特征：MD5前缀含d41d、a8ee等；C2域名模式*.emotet.cc、*.emotet.ru、*.emotet.net；注册表Run项HKCU\\...\\Run\\WindowsUpdateCheck；计划任务名称含WinInit、UpdateCheck。检测：邮件内容分析、注册表监控、计划任务审计。",
+      "keywords": [
+        "Emotet",
+        "IoC",
+        "钓鱼邮件",
+        "C2",
+        "注册表",
+        "计划任务"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "邮件网关过滤，进程监控。",
+      "collected_at": "2026-08-11T15:40:08.908688",
+      "hash": "ce604eb8cad08c68"
+    },
+    {
+      "id": "ioc-004",
+      "category": "威胁指标",
+      "source": "威胁情报聚合",
+      "source_file": "iocs\\known_iocs.json",
+      "title": "TrickBot 已知IOC与C2基础设施",
+      "content": "TrickBot恶意软件已知指标：C2端口 8080/443/8443；域名模式*.trickbot.com、*.kewlb.com；DLL侧加载文件名：trick.dll, trickloader.exe, helper.dll；注册表Run键含trick特征；SMB横向传播特征（admin$共享访问）。检测：异常DLL加载（特别是System32目录下）、SMB大流量、进程树异常（explorer.exe加载trick.dll）。",
+      "keywords": [
+        "TrickBot",
+        "IOC",
+        "C2",
+        "DLL侧加载",
+        "SMB",
+        "trick.dll"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "DNS过滤，EDR DLL加载监控。",
+      "collected_at": "2026-08-11T15:40:08.908697",
+      "hash": "18e94e6131f35ebd"
+    },
+    {
+      "id": "ir-001",
+      "category": "应急响应",
+      "source": "最佳实践",
+      "source_file": "ir_playbooks\\incident_response_playbooks.json",
+      "title": "勒索软件应急响应标准流程（IR Playbook）",
+      "content": "勒索软件事件应急响应标准流程：阶段1-检测与确认（0-1小时）：1. 确认告警（终端EDR/ SIEM告警）2. 确认感染主机（检查加密文件扩展名、勒索信）3. 确定勒索软件家族（LockBit/Conti/Ryuk等）4. 评估影响范围（感染主机数、加密文件数）。阶段2-遏制（1-4小时）：1. 隔离受感染主机（断网/拔网线）2. 封堵C2域名/IP（防火墙/DNS过滤）3. 封禁攻击者账户（禁用/密码重置）4. 创建快照/镜像用于取证。阶段3-根除（4-24小时）：1. 清除持久化机制（注册表Run/计划任务/服务）2. 删除恶意文件（保留样本）3. 修复漏洞入口（补丁/配置）4. 检查横向移动痕迹。阶段4-恢复（24-72小时）：1. 从离线备份恢复数据 2. 重建受感染系统 3. 重新上线前安全扫描 4. 监控72小时无复发。阶段5-复盘：1. 攻击链重建 2. 时间线整理 3. 改进建议 4. 更新应急预案。",
+      "keywords": [
+        "勒索软件",
+        "应急响应",
+        "IR",
+        "遏制",
+        "恢复",
+        "取证",
+        "隔离"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://www.cisa.gov/ransomware"
+      ],
+      "ttps": [],
+      "mitigation": "离线备份、定期应急演练、EDR覆盖。",
+      "collected_at": "2026-08-11T15:40:08.909510",
+      "hash": "c37eb868369fa149"
+    },
+    {
+      "id": "ir-002",
+      "category": "应急响应",
+      "source": "最佳实践",
+      "source_file": "ir_playbooks\\incident_response_playbooks.json",
+      "title": "APT入侵事件响应与取证流程",
+      "content": "APT入侵应急响应流程：1. 发现与确认：SIEM告警→确认异常→初步定性（是否为APT）2. 范围确定：搜索内网IOC（IP/域名/哈希/进程名）→确定影响范围→检查横向移动痕迹3. 遏制：封堵C2→隔离受影响主机→禁用 compromised账户→保留证据快照4. 根除：清除恶意进程/服务/计划任务→删除持久化机制→修补漏洞入口5. 取证：内存dump（Volatility）→磁盘镜像（FTK/Autopsy）→日志收集（Windows事件/Sysmon）→网络流量dump6. 溯源：C2基础设施分析→攻击者TTPs分析→归因（APT组织识别）。关键证据：内存中的进程列表、网络连接、启动项；磁盘中的恶意样本、注册表修改、WMI事件订阅器；日志中的登录记录、进程创建、网络活动。",
+      "keywords": [
+        "APT",
+        "应急响应",
+        "取证",
+        "Volatility",
+        "内存分析",
+        "磁盘镜像",
+        "溯源"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "EDR日志集中、Volatility分析工具、网络流量存储。",
+      "collected_at": "2026-08-11T15:40:08.909528",
+      "hash": "f4e798ca40f353a0"
+    },
+    {
+      "id": "ir-003",
+      "category": "应急响应",
+      "source": "最佳实践",
+      "source_file": "ir_playbooks\\incident_response_playbooks.json",
+      "title": "DLP数据泄露事件处置流程",
+      "content": "数据泄露应急响应：1. 确认泄露类型：外部泄露（邮件/云盘/社交媒体）还是内部泄露（U盘/打印/复制）2. 评估泄露数据敏感度：PII/财务数据/知识产权/密钥凭证3. 立即封堵：阻断泄露渠道（禁用邮箱外发/封堵云盘）4. 影响评估：泄露数据量、受影响用户数、潜在损失5. 通知义务：按GDPR/网络安全法要求通知监管机构和受影响用户6. 根除与加固：查找泄露源头、封堵漏洞、加强访问控制。检测指标：大文件外发、非工作时间数据访问、异常云盘上传、USB写入。",
+      "keywords": [
+        "DLP",
+        "数据泄露",
+        "GDPR",
+        "PII",
+        "应急响应",
+        "通知义务"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "DLP策略、数据分类分级、访问审计。",
+      "collected_at": "2026-08-11T15:40:08.909549",
+      "hash": "eebe8cede58bcf01"
+    },
+    {
+      "id": "ir-004",
+      "category": "应急响应",
+      "source": "最佳实践",
+      "source_file": "ir_playbooks\\incident_response_playbooks.json",
+      "title": "Web应用攻击事件处置流程",
+      "content": "Web应用攻击处置：1. SQL注入：检查web服务器日志中的SELECT/UNION/INSERT/DELETE关键字→数据库审计→修补参数化查询→WAF规则 2. XSS攻击：检查<script>/<img onerror/JavaScript:URL关键字→清理用户输入→HttpOnly Cookie→CSP策略 3. 文件上传漏洞：检查非预期文件类型上传→文件类型白名单→存储隔离→MIME类型校验 4. SSRF攻击：检测内网端口扫描→URL白名单→禁用内网访问→代理校验 5. 认证绕过：检查登录接口异常→会话管理加固→MFA启用。关键日志：nginx/apache访问日志、WAF拦截日志、应用错误日志。",
+      "keywords": [
+        "SQL注入",
+        "XSS",
+        "SSRF",
+        "文件上传",
+        "Web安全",
+        "WAF"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "WAF、参数化查询、文件类型白名单、CSP。",
+      "collected_at": "2026-08-11T15:40:08.909559",
+      "hash": "a892397bc629d992"
+    },
+    {
+      "id": "mal-001",
+      "category": "恶意软件",
+      "source": "威胁情报聚合",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "LockBit 3.0勒索软件 — 变种分析与处置",
+      "content": "LockBit 3.0是2023-2024年最活跃的勒索软件家族，采用Rust编写。传播方式：1. 批量利用RDP端口暴力破解（默认22端口扫描器）2. 利用MOVEit Transfer零日漏洞（CVE-2023-34362）3. 供应链攻击（通过合法软件更新）。加密特征：.lockbit3扩展名，AES-256-GCM+RSA-2048混合加密。 evasion技术：反沙箱检测（检查VMware/VirtualBox进程）、管理员权限检测、VM指纹检测。处置：1. 立即隔离受感染主机 2. 清除LockBit后门（通常是DLL侧加载或计划任务）3. 检查 lateral movement痕迹（PSEXEC、WMI）4. 从离线备份恢复 5. 封堵RDP入口。IoC：C2域名*.lockbit.com，IP段含大量加密攻击源，哈希特征文件。",
+      "keywords": [
+        "LockBit",
+        "勒索软件",
+        "ransomware",
+        "RDP",
+        "MOVEit",
+        "Crypto",
+        "AES-256",
+        "C2"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://www.cisa.gov/lockbit-ransomware",
+        "https://www.lockbit.com"
+      ],
+      "ttps": [
+        "T1486-数据加密/阻碍恢复",
+        "T1078-有效账户",
+        "T1021-远程服务"
+      ],
+      "mitigation": "封堵RDP端口，启用MFA，备份离线存储。",
+      "collected_at": "2026-08-11T15:40:08.910395",
+      "hash": "e02e129b12cc52e2"
+    },
+    {
+      "id": "mal-002",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "Conti勒索软件 — 泄露源码分析与变种",
+      "content": "Conti勒索软件于2022年底泄露源码，此后出现多个变种（Sodinokibi、CrypToX等）。特征：Go语言编写，支持Linux/Windows双平台，使用Ryuk风格的文件加密。传播方式：主要通过钓鱼邮件和exploit kits（RIG、Magnitude）。处置：1. 识别C2域名特征（*.contileak.com）2. 搜索内存中的加密密钥 3. 使用NoMoreRansom解密工具（部分Conti变种可解密）。IoC：恶意文档附件哈希、C2 IP地址范围。",
+      "keywords": [
+        "Conti",
+        "勒索软件",
+        "Sodinokibi",
+        "Go",
+        "RIG",
+        "Magnitude",
+        "钓鱼"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://nomoreransom.cisa.gov/decryption-tools/conti"
+      ],
+      "ttps": [
+        "T1566-初始访问",
+        "T1486-数据加密"
+      ],
+      "mitigation": "邮件网关过滤，端点EDR检测。",
+      "collected_at": "2026-08-11T15:40:08.910413",
+      "hash": "31306ed81154011f"
+    },
+    {
+      "id": "mal-003",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "Cobalt Strike — 红队工具滥用与检测",
+      "content": "Cobalt Strike是合法的红队测试工具，但被广泛用于APT攻击和勒索软件基础设施。攻击者使用Cobalt Strike作为C2框架进行：1. 内网横向移动（Beacon）2. 凭据窃取（Mimikatz集成功能）3. 权限提升（内网渗透）。检测指标：1. DNS Beacon（特定TXT记录查询模式）2. HTTP Beacon（User-Agent特征）3. SMB Beacon（进程注入特征）4. 内存中beacon shellcode签名。处置：1. 网络层检测Cobalt Strike默认端口（50683, 50684）2. 端点层检测Mimikatz进程 3. DNS查询异常检测。",
+      "keywords": [
+        "Cobalt Strike",
+        "Beacon",
+        "Mimikatz",
+        "C2",
+        "横向移动",
+        "红队",
+        "DNS隧道"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/software/S0154/"
+      ],
+      "ttps": [
+        "T1071-应用层协议",
+        "T1059-命令与脚本解释器",
+        "T1003-OS Credential Dumping"
+      ],
+      "mitigation": "DNS日志监控，EDR检测Mimikatz，网络分段。",
+      "collected_at": "2026-08-11T15:40:08.910423",
+      "hash": "a5032a1eb56bd4c4"
+    },
+    {
+      "id": "mal-004",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "Emotet — 恶意软件即服务(MaaS)分析",
+      "content": "Emotet是从银行木马演变为MaaS平台的恶意软件家族，2021年后被欧盟打击但变种持续出现。传播：1. 钓鱼邮件（宏恶意文档）2. 垃圾邮件（PDF/ZIP附件）3. 其他恶意软件捆绑传播。技术特征：Rust编写（避免签名检测）、支持模块化扩展、具备反调试和虚拟机检测能力。处置：1. 清理所有邮件代理规则 2. 检查Outlook宏配置 3. 清除注册表Run项 4. 使用Emotet专用清除工具（Hitachi/微软）。IoC：恶意URL含.emotet特征，证书指纹已知列表。",
+      "keywords": [
+        "Emotet",
+        "MaaS",
+        "银行木马",
+        "Rust",
+        "钓鱼邮件",
+        "宏",
+        "Outlook"
+      ],
+      "severity": "high",
+      "references": [
+        "https://www.europol.europa.eu/emotet"
+      ],
+      "ttps": [
+        "T1566-初始访问",
+        "T1059-命令与脚本解释器"
+      ],
+      "mitigation": "邮件网关过滤，宏策略禁用，EDR监控。",
+      "collected_at": "2026-08-11T15:40:08.910433",
+      "hash": "01d7fcde0da0904f"
+    },
+    {
+      "id": "mal-005",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "Qakbot — 银行木马与凭证窃取",
+      "content": "Qakbot（Qbot）是功能强大的银行木马，支持凭证窃取、邮件窃取、勒索软件投递。技术特征：C#编写、支持DLL侧加载、具备反沙箱能力。2023年联邦调查局主导打击行动（Operation Beehunter）但变种仍在。传播：1. 恶意广告（malvertising）2. 钓鱼邮件 3. 软件破解工具捆绑。处置：1. 搜索Qakbot DLL注入痕迹 2. 检查Chrome/Firefox/Outlook密码存储 3. 检查注册表Run和启动项。IoC：恶意IP、证书指纹、特定进程注入模式。",
+      "keywords": [
+        "Qakbot",
+        "Qbot",
+        "银行木马",
+        "DLL侧加载",
+        "凭证窃取",
+        "malvertising"
+      ],
+      "severity": "high",
+      "references": [
+        "https://www.fbi.gov/news/stories/qakbot-takedown-062223"
+      ],
+      "ttps": [
+        "T1055-进程注入",
+        "T1552-未加密/非托管凭据"
+      ],
+      "mitigation": "内存扫描检测注入，浏览器密码导出检查。",
+      "collected_at": "2026-08-11T15:40:08.910441",
+      "hash": "0f4151d2a1860fe1"
+    },
+    {
+      "id": "mal-006",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "TrickBot — 初始访问broker与后门",
+      "content": "TrickBot是多功能银行木马和IAB（初始访问broker），为其他恶意软件（如Ryuk勒索软件）提供初始入口。特征：C++编写、模块化的Python加载器、支持多种投递方式。攻击链：TrickBot投递→Ryuk勒索软件加密→敲诈勒索。检测：1. TrickBot DLL特征（trick.dll, trickloader.exe）2. 可疑注册表修改 3. 异常进程父子关系。处置：1. 清除恶意DLL 2. 检查计划任务 3. 封堵C2域名。",
+      "keywords": [
+        "TrickBot",
+        "Ryuk",
+        "IAB",
+        "DLL",
+        "勒索软件投递",
+        "C2"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [
+        "T1566-初始访问",
+        "T1059-命令与脚本解释器"
+      ],
+      "mitigation": "端点检测TrickBot DLL，网络层封堵C2。",
+      "collected_at": "2026-08-11T15:40:08.910453",
+      "hash": "c07779d7a9d2e669"
+    },
+    {
+      "id": "mal-007",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "Ryuk — 针对企业的高额勒索软件",
+      "content": "Ryuk是Target公司专属的高级勒索软件，主要针对大型企业和医疗机构，赎金要求5-50万美元。特征：Wiper行为（清除系统还原点、VSS卷影副本），加密速度快，通过TrickBot/Emotet传播。攻击手法：1. 通过TrickBot获取初始访问 2. 横向移动到管理账户 3. 禁用备份服务 4. 执行加密。处置：1. 不支付赎金（无解密保证）2. 从离线备份恢复 3. 清除所有横向移动痕迹。检测方法：监控VSS删除事件（Event ID 2019）、检查备份服务状态。",
+      "keywords": [
+        "Ryuk",
+        "勒索软件",
+        "Target",
+        "VSS",
+        "Wiper",
+        "横向移动",
+        "备份清除"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [
+        "T1490-抑制防御功能",
+        "T1499-资源滥用",
+        "T1070-清除痕迹"
+      ],
+      "mitigation": "离线备份、VSS保护、监控备份服务。",
+      "collected_at": "2026-08-11T15:40:08.910465",
+      "hash": "fff9c36cedfd232a"
+    },
+    {
+      "id": "mal-008",
+      "category": "恶意软件",
+      "source": "malware_families\\ransomware_families.json",
+      "source_file": "malware_families\\ransomware_families.json",
+      "title": "DarkSide — 双轨勒索软件（数据窃取+加密）",
+      "content": "DarkSide采用'数据窃取+加密'双轨攻击模式：先窃取数据（leak site威胁），再加密文件。2021年Colonial Pipeline攻击使其闻名。技术特征：Go语言编写、使用Telegram作为C2通信渠道、具备选择性加密（只加密特定文件类型）。处置：1. 追踪Telegram C2通信 2. 查找泄露数据镜像 3. 从备份恢复。检测方法：监控Telegram Bot API调用（.telegram.org API路径）。",
+      "keywords": [
+        "DarkSide",
+        "Colonial Pipeline",
+        "Telegram",
+        "数据窃取",
+        "双轨攻击"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [
+        "T1486-数据加密",
+        "T1567-数据渗出"
+      ],
+      "mitigation": "网络层检测Telegram API调用，流量加密检测。",
+      "collected_at": "2026-08-11T15:40:08.910473",
+      "hash": "1138f261b03e4806"
+    },
+    {
+      "id": "attack-001",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 初始访问（Initial Access）战术",
+      "content": "初始访问指攻击者首次进入目标环境的策略。常见技术：T1566钓鱼（Phishing）— 发送含恶意附件的邮件，最常见攻击入口；T1566.001 spearphishing attachment — 钓鱼附件（Office宏、PDF）；T1190 exploit public-facing application — 利用公开Web应用的零日/已知漏洞；T1133外部远程服务 — 暴露的VPN/RDP/SSH服务；T1588获取工具 — 购买exploit kit或RaaS订阅。检测：邮件网关URL过滤、EDR检测恶意附件执行、NTP日志监控异常VPN连接。处置：封堵暴露的管理接口，启用MFA，邮件沙箱分析。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "初始访问",
+        "钓鱼",
+        "phishing",
+        "T1566",
+        "T1190",
+        "T1133"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0001/"
+      ],
+      "ttps": [
+        "T1566",
+        "T1566.001",
+        "T1190",
+        "T1133",
+        "T1588"
+      ],
+      "mitigation": "启用MFA，邮件沙箱，封堵暴露接口。",
+      "collected_at": "2026-08-11T15:40:08.911296",
+      "hash": "c79b3bfcbe5c910b"
+    },
+    {
+      "id": "attack-002",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 执行（Execution）战术",
+      "content": "攻击者在目标环境执行代码的技术。常见技术：T1059命令与脚本解释器 — PowerShell/Bash/Python脚本；T1059.001 PowerShell — 最常见的Windows脚本攻击手段（Invoke-Expression、EncodedCommand）；T1027混淆文件/信息 — Base64编码、压缩、DLL侧加载；T1072软件部署工具 — MSBuild/SCCM/PSEXEC远程执行。检测：PowerShell日志（Event ID 4103/4104）、进程树异常（excel.exe启动powershell）、DNS过长寿查询。处置：限制PowerShell执行策略，应用白名单，EDR进程监控。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "执行",
+        "PowerShell",
+        "T1059",
+        "混淆",
+        "PSEXEC"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0002/"
+      ],
+      "ttps": [
+        "T1059",
+        "T1059.001",
+        "T1027",
+        "T1072"
+      ],
+      "mitigation": "PowerShell constrained language mode，应用白名单。",
+      "collected_at": "2026-08-11T15:40:08.911313",
+      "hash": "94ae07d3b7520276"
+    },
+    {
+      "id": "attack-003",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 持久化（Persistence）战术",
+      "content": "攻击者维持访问权限的技术。常见技术：T1547启动/登录自动执行 — 注册表Run键、启动文件夹、计划任务；T1053计划任务 —schtasks/AT命令；T1037注册表运行键 — HKCU/HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run；T1098账户操作 — 创建后门账户；T1543创建/修改系统服务 — 恶意Windows服务。检测：注册表Run项监控、计划任务异常创建、服务安装事件(Event ID 7045)。处置：清除恶意启动项，审计账户列表，检查服务。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "持久化",
+        "T1547",
+        "T1053",
+        "注册表",
+        "计划任务",
+        "服务"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0003/"
+      ],
+      "ttps": [
+        "T1547",
+        "T1053",
+        "T1037",
+        "T1098",
+        "T1543"
+      ],
+      "mitigation": "注册表实时监控，启动项审计，最小权限。",
+      "collected_at": "2026-08-11T15:40:08.911323",
+      "hash": "bb8f7fcadef834f1"
+    },
+    {
+      "id": "attack-004",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 凭据获取（Credential Access）战术",
+      "content": "攻击者窃取凭据的技术。常见技术：T1003 OS凭据转储 — Mimikatz/Seatbelt/Procdump；T1003.001 LSASS内存 — 最常见的Windows凭据窃取方式；T1552未加密/非托管凭据 — 浏览器密码、计划任务保存密码；T1552.001浏览器密码 — Chrome/Firefox密码导出；T1098账户操作 — SSH密钥窃取、VPN配置导出。检测：LSASS进程异常访问（Process Injection）、Mimikatz签名检测、浏览器密码导出事件。处置：启用Credential Guard、LSASS保护、定期轮换凭据。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "凭据获取",
+        "Mimikatz",
+        "LSASS",
+        "T1003",
+        "T1552"
+      ],
+      "severity": "critical",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0004/"
+      ],
+      "ttps": [
+        "T1003",
+        "T1003.001",
+        "T1552",
+        "T1552.001"
+      ],
+      "mitigation": "Windows Credential Guard、LSASS保护模式、定期轮换。",
+      "collected_at": "2026-08-11T15:40:08.911333",
+      "hash": "a23fe26e20bb082d"
+    },
+    {
+      "id": "attack-005",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 横向移动（Lateral Movement）战术",
+      "content": "攻击者在网络内移动的技术。常见技术：T1021远程服务 — RDP/PSEXEC/SMB/WMI/WinRM；T1021.001 RDP — 最常见的横向移动方式；T1021.002 SMB/Windows管理（WMI）；T1021.003 DCOM — DCOM远程对象；T1550使用替代认证 — Pass-the-Hash/Pass-the-Ticket。检测：异常RDP会话（非工作时间）、WMI远程执行日志、SMB异常大流量。处置：网络分段、最小权限、禁用不必要协议。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "横向移动",
+        "RDP",
+        "PSEXEC",
+        "WMI",
+        "Pass-the-Hash",
+        "T1021"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0008/"
+      ],
+      "ttps": [
+        "T1021",
+        "T1021.001",
+        "T1021.002",
+        "T1550"
+      ],
+      "mitigation": "网络分段、禁用RDP公网暴露、启用NLA。",
+      "collected_at": "2026-08-11T15:40:08.911341",
+      "hash": "317c97b03ce587cd"
+    },
+    {
+      "id": "attack-006",
+      "category": "攻击战术",
+      "source": "MITRE ATT&CK",
+      "source_file": "mitre_attack\\attack_tactics.json",
+      "title": "MITRE ATT&CK — 防御规避（Defense Evasion）战术",
+      "content": "攻击者逃避检测的技术。常见技术：T1027混淆 — 文件打包、编码、多态；T1070清除痕迹 — 清除Windows事件日志、删除临时文件；T1070.001清除Windows事件日志 — 使用wevtutil/PowerShell清除Security日志；T1564隐藏执行 — 隐藏窗口、无文件执行、进程注入；T1553子服务认证 — SIPs/注册表劫持。检测：事件日志清除事件（Event ID 1102）、异常进程注入、可疑父进程关系。处置：集中日志审计、进程白名单、EDR完整覆盖。",
+      "keywords": [
+        "MITRE",
+        "ATT&CK",
+        "防御规避",
+        "T1027",
+        "T1070",
+        "事件日志清除",
+        "T1564",
+        "进程注入"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/tactics/TA0005/"
+      ],
+      "ttps": [
+        "T1027",
+        "T1070",
+        "T1070.001",
+        "T1564",
+        "T1553"
+      ],
+      "mitigation": "集中日志审计（SIEM）、进程完整性监控。",
+      "collected_at": "2026-08-11T15:40:08.911349",
+      "hash": "ed1bba308b9037d1"
+    },
+    {
+      "id": "tp-001",
+      "category": "流量特征",
+      "source": "流量分析",
+      "source_file": "traffic_patterns\\traffic_signatures.json",
+      "title": "勒索软件C2通信流量特征识别",
+      "content": "勒索软件C2通信的典型流量特征：1. DNS过隧道 — 高频TXT记录查询（>100次/分钟），子域名长度异常（>30字符），查询模式规律；2. HTTPS C2 — 固定证书指纹（非证书透明度日志）、SNI域名与证书CN不匹配；3. 加密通信 — TLS 1.3仅、固定JA3指纹；4. 低频心跳 — 周期性短连接（每5-30分钟）；5. 异常时间 — 深夜/周末高频连接。检测方法：Zeek/Brute日志分析、JA3指纹聚类、DNS查询频率阈值告警。处置：封堵C2域名/IP，溯源内网感染源。",
+      "keywords": [
+        "流量分析",
+        "C2",
+        "DNS隧道",
+        "JA3",
+        "TLS",
+        "勒索软件",
+        "网络流量"
+      ],
+      "severity": "high",
+      "references": [
+        "https://attack.mitre.org/techniques/T1071/004/"
+      ],
+      "ttps": [],
+      "mitigation": "流量基线建立，异常DNS查询告警。",
+      "collected_at": "2026-08-11T15:40:08.912115",
+      "hash": "b9d2c897a841b045"
+    },
+    {
+      "id": "tp-002",
+      "category": "流量特征",
+      "source": "流量分析",
+      "source_file": "traffic_patterns\\traffic_signatures.json",
+      "title": "SSH暴力破解流量特征",
+      "content": "SSH暴力破解的典型流量模式：1. 高频连接 — 单IP每分钟>30次SSH连接；2. 短时断开 — 每次连接<5秒即断开（密码不正确）；3. 规律性 — 连接间隔均匀（自动化脚本特征）；4. 端口漂移 — 攻击IP切换源端口；5. 失败后成功 — 大量失败后出现一次成功登录（可能是密码喷溅成功）。检测方法：日志分析(sshd日志)、网络流量聚合、IDS规则(SURICATA SSH brute force)。处置：fail2ban封禁、密钥认证、限制SSH登录来源IP。",
+      "keywords": [
+        "SSH",
+        "暴力破解",
+        "brute force",
+        "流量特征",
+        "fail2ban",
+        "CPE-SSH"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "fail2ban、密钥认证、IP白名单。",
+      "collected_at": "2026-08-11T15:40:08.912137",
+      "hash": "f283ec489e32909c"
+    },
+    {
+      "id": "tp-003",
+      "category": "流量特征",
+      "source": "流量分析",
+      "source_file": "traffic_patterns\\traffic_signatures.json",
+      "title": "WebShell后門流量特征识别",
+      "content": "WebShell（PHP/JSP/ASPX）后门的流量特征：1. 可疑User-Agent — 包含curl/wget/python/perl/httpclient；2. 异常POST请求 — 到.php/.jsp/.aspx文件的POST请求（正常应很少）；3. 小Payload大响应 — 请求体<1KB但响应>10KB（执行系统命令）；4. 特定路径 — /wp-content/uploads/、/images/、/tmp/目录下的可疑PHP文件；5. Base64编码参数 — 请求参数含base64编码。检测方法：WAF规则、流量异常检测、文件完整性监控。处置：WebShell文件删除、源IP封禁、Web服务器日志审计。",
+      "keywords": [
+        "WebShell",
+        "PHP",
+        "后门",
+        "流量特征",
+        "WAF",
+        "POST请求",
+        "base64"
+      ],
+      "severity": "high",
+      "references": [],
+      "ttps": [],
+      "mitigation": "WAF规则、文件完整性监控、定期Webshell扫描。",
+      "collected_at": "2026-08-11T15:40:08.912146",
+      "hash": "133395c6e3cd7ad9"
+    },
+    {
+      "id": "tp-004",
+      "category": "流量特征",
+      "source": "流量分析",
+      "source_file": "traffic_patterns\\traffic_signatures.json",
+      "title": "勒索软件加密传播流量特征",
+      "content": "勒索软件内网传播的典型流量：1. SMB大流量 — 大量SMB连接（端口445）到多个内部主机；2. RDP异常 — 非工作时间RDP会话爆发；3. WMI远程执行 — 大量WMI进程创建事件；4. PSEXEC特征 — 管理员共享(admin$)文件传输。检测：SMB连接矩阵分析、RDP会话异常告警、WMI远程调用审计。处置：网络分段、禁用445端口外联、启用WMI远程执行日志。",
+      "keywords": [
+        "勒索软件",
+        "SMB",
+        "445",
+        "RDP",
+        "WMI",
+        "PSEXEC",
+        "内网传播"
+      ],
+      "severity": "critical",
+      "references": [],
+      "ttps": [],
+      "mitigation": "网络分段、SMB防火墙规则、WMI日志审计。",
+      "collected_at": "2026-08-11T15:40:08.912156",
+      "hash": "b670e2dcd756d716"
+    }
+  ]
+}

@@ -461,6 +461,26 @@ async function startServer(options = {}) {
       logger.error('配置知识库完整性校验失败:', err.message);
     }
 
+    // 威胁知识库同步：每日凌晨2点重建索引，配置项 KNOWLEDGE_SYNC_ENABLED
+    try {
+      if (config.knowledgeSync.enabled) {
+        nodeCron.schedule(config.knowledgeSync.cron, () => {
+          logger.info('执行定时任务: 威胁知识库索引重建');
+          try {
+            const { syncKnowledgeIndex } = require('./services/knowledgeSyncService');
+            syncKnowledgeIndex().catch((err) => {
+              logger.error('知识库同步失败:', err.message);
+            });
+          } catch (err) {
+            logger.error('知识库同步任务配置失败:', err.message);
+          }
+        });
+        logger.info(`定时任务已配置: 威胁知识库同步 (${config.knowledgeSync.cron})`);
+      }
+    } catch (err) {
+      logger.error('配置威胁知识库同步失败:', err.message);
+    }
+
     // 威胁情报 LLM 融合：每 4 小时拉取最新安全更新，注入系统 Prompt
     try {
       nodeCron.schedule('0 */4 * * *', async () => {

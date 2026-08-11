@@ -71,6 +71,11 @@ const config = {
   threatIntel: {
     interval: parseInt(process.env.THREAT_INTEL_INTERVAL) || 30
   },
+  knowledgeSync: {
+    enabled: process.env.KNOWLEDGE_SYNC_ENABLED !== 'false',
+    cron: process.env.KNOWLEDGE_SYNC_CRON || '0 2 * * *',  // 每日凌晨2点
+    sources: (process.env.KNOWLEDGE_SYNC_SOURCES || 'cve,mitre,local').split(',')
+  },
   bcrypt: {
     rounds: parseInt(process.env.BCRYPT_ROUNDS) || 10
   }

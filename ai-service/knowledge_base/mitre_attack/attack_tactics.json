@@ -1,0 +1,74 @@
+[
+  {
+    "id": "attack-001",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 初始访问（Initial Access）战术",
+    "content": "初始访问指攻击者首次进入目标环境的策略。常见技术：T1566钓鱼（Phishing）— 发送含恶意附件的邮件，最常见攻击入口；T1566.001 spearphishing attachment — 钓鱼附件（Office宏、PDF）；T1190 exploit public-facing application — 利用公开Web应用的零日/已知漏洞；T1133外部远程服务 — 暴露的VPN/RDP/SSH服务；T1588获取工具 — 购买exploit kit或RaaS订阅。检测：邮件网关URL过滤、EDR检测恶意附件执行、NTP日志监控异常VPN连接。处置：封堵暴露的管理接口，启用MFA，邮件沙箱分析。",
+    "keywords": ["MITRE", "ATT&CK", "初始访问", "钓鱼", "phishing", "T1566", "T1190", "T1133"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/tactics/TA0001/"],
+    "ttps": ["T1566", "T1566.001", "T1190", "T1133", "T1588"],
+    "mitigation": "启用MFA，邮件沙箱，封堵暴露接口。"
+  },
+  {
+    "id": "attack-002",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 执行（Execution）战术",
+    "content": "攻击者在目标环境执行代码的技术。常见技术：T1059命令与脚本解释器 — PowerShell/Bash/Python脚本；T1059.001 PowerShell — 最常见的Windows脚本攻击手段（Invoke-Expression、EncodedCommand）；T1027混淆文件/信息 — Base64编码、压缩、DLL侧加载；T1072软件部署工具 — MSBuild/SCCM/PSEXEC远程执行。检测：PowerShell日志（Event ID 4103/4104）、进程树异常（excel.exe启动powershell）、DNS过长寿查询。处置：限制PowerShell执行策略，应用白名单，EDR进程监控。",
+    "keywords": ["MITRE", "ATT&CK", "执行", "PowerShell", "T1059", "混淆", "PSEXEC"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/tactics/TA0002/"],
+    "ttps": ["T1059", "T1059.001", "T1027", "T1072"],
+    "mitigation": "PowerShell constrained language mode，应用白名单。"
+  },
+  {
+    "id": "attack-003",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 持久化（Persistence）战术",
+    "content": "攻击者维持访问权限的技术。常见技术：T1547启动/登录自动执行 — 注册表Run键、启动文件夹、计划任务；T1053计划任务 —schtasks/AT命令；T1037注册表运行键 — HKCU/HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run；T1098账户操作 — 创建后门账户；T1543创建/修改系统服务 — 恶意Windows服务。检测：注册表Run项监控、计划任务异常创建、服务安装事件(Event ID 7045)。处置：清除恶意启动项，审计账户列表，检查服务。",
+    "keywords": ["MITRE", "ATT&CK", "持久化", "T1547", "T1053", "注册表", "计划任务", "服务"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/tactics/TA0003/"],
+    "ttps": ["T1547", "T1053", "T1037", "T1098", "T1543"],
+    "mitigation": "注册表实时监控，启动项审计，最小权限。"
+  },
+  {
+    "id": "attack-004",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 凭据获取（Credential Access）战术",
+    "content": "攻击者窃取凭据的技术。常见技术：T1003 OS凭据转储 — Mimikatz/Seatbelt/Procdump；T1003.001 LSASS内存 — 最常见的Windows凭据窃取方式；T1552未加密/非托管凭据 — 浏览器密码、计划任务保存密码；T1552.001浏览器密码 — Chrome/Firefox密码导出；T1098账户操作 — SSH密钥窃取、VPN配置导出。检测：LSASS进程异常访问（Process Injection）、Mimikatz签名检测、浏览器密码导出事件。处置：启用Credential Guard、LSASS保护、定期轮换凭据。",
+    "keywords": ["MITRE", "ATT&CK", "凭据获取", "Mimikatz", "LSASS", "T1003", "T1552"],
+    "severity": "critical",
+    "references": ["https://attack.mitre.org/tactics/TA0004/"],
+    "ttps": ["T1003", "T1003.001", "T1552", "T1552.001"],
+    "mitigation": "Windows Credential Guard、LSASS保护模式、定期轮换。"
+  },
+  {
+    "id": "attack-005",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 横向移动（Lateral Movement）战术",
+    "content": "攻击者在网络内移动的技术。常见技术：T1021远程服务 — RDP/PSEXEC/SMB/WMI/WinRM；T1021.001 RDP — 最常见的横向移动方式；T1021.002 SMB/Windows管理（WMI）；T1021.003 DCOM — DCOM远程对象；T1550使用替代认证 — Pass-the-Hash/Pass-the-Ticket。检测：异常RDP会话（非工作时间）、WMI远程执行日志、SMB异常大流量。处置：网络分段、最小权限、禁用不必要协议。",
+    "keywords": ["MITRE", "ATT&CK", "横向移动", "RDP", "PSEXEC", "WMI", "Pass-the-Hash", "T1021"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/tactics/TA0008/"],
+    "ttps": ["T1021", "T1021.001", "T1021.002", "T1550"],
+    "mitigation": "网络分段、禁用RDP公网暴露、启用NLA。"
+  },
+  {
+    "id": "attack-006",
+    "category": "攻击战术",
+    "source": "MITRE ATT&CK",
+    "title": "MITRE ATT&CK — 防御规避（Defense Evasion）战术",
+    "content": "攻击者逃避检测的技术。常见技术：T1027混淆 — 文件打包、编码、多态；T1070清除痕迹 — 清除Windows事件日志、删除临时文件；T1070.001清除Windows事件日志 — 使用wevtutil/PowerShell清除Security日志；T1564隐藏执行 — 隐藏窗口、无文件执行、进程注入；T1553子服务认证 — SIPs/注册表劫持。检测：事件日志清除事件（Event ID 1102）、异常进程注入、可疑父进程关系。处置：集中日志审计、进程白名单、EDR完整覆盖。",
+    "keywords": ["MITRE", "ATT&CK", "防御规避", "T1027", "T1070", "事件日志清除", "T1564", "进程注入"],
+    "severity": "high",
+    "references": ["https://attack.mitre.org/tactics/TA0005/"],
+    "ttps": ["T1027", "T1070", "T1070.001", "T1564", "T1553"],
+    "mitigation": "集中日志审计（SIEM）、进程完整性监控。"
+  }
+]

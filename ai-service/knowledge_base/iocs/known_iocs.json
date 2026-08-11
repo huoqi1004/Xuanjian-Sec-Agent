@@ -1,0 +1,44 @@
+[
+  {
+    "id": "ioc-001",
+    "category": "威胁指标",
+    "source": "威胁情报聚合",
+    "title": "LockBit 3.0 已知IoC集合",
+    "content": "LockBit 3.0勒索软件已知指标集合：C2域名模式 *.lockbit.onion（Tor隐藏服务）、*.lockbit.com、*.lockbit.org。恶意IP段：23.227.38.*（Cloudflare CDN滥用）、45.153.160.*、185.220.101.*（Tor出口节点）。哈希特征：beacon DLL哈希常含9f1a、a9c2等特征前缀。持久化：注册表 Run 键 HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\WindowsDefender。检测方法：DNS查询lockbit域名、网络连接异常IP、注册表Run项异常。",
+    "keywords": ["LockBit", "IoC", "C2", "域名", "哈希", "ransomware", "Tor"],
+    "severity": "critical",
+    "references": ["https://www.cisa.gov/lockbit-ransomware"],
+    "mitigation": "网络层DNS过滤lockbit域名，终端层检测已知哈希。"
+  },
+  {
+    "id": "ioc-002",
+    "category": "威胁指标",
+    "source": "威胁情报聚合",
+    "title": "APT29/Cozy Bear 已知TTPs和IoC",
+    "content": "APT29（Cozy Bear/长春花）是俄罗斯情报机构关联的高级威胁组织。常用技术：SUNBURST后门（SolarWinds供应链攻击）、XZ Utils后门（CVE-2024-3094）、C2过DNS TXT记录（TXT查询*.c2.example.com）。IoC：恶意域名*.sunburst-update.com、*.globe7.com。证书指纹：SHA256 F8:0E:FE:8D:... 等。检测方法：监控异常DNS TXT查询、检测太阳burst安装痕迹（WMI事件消费者）。处置：检查SolarWinds Orion安装、搜索WMI永久事件订阅器。",
+    "keywords": ["APT29", "Cozy Bear", "SUNBURST", "SolarWinds", "DNS TXT", "C2", "供应链"],
+    "severity": "critical",
+    "references": ["https://www.cisa.gov/apt29-indicators"],
+    "mitigation": "SolarWinds补丁、DNS监控、WMI审计。"
+  },
+  {
+    "id": "ioc-003",
+    "category": "威胁指标",
+    "source": "威胁情报聚合",
+    "title": "Emotet 已知IOC与检测指标",
+    "content": "Emotet恶意软件已知指标：钓鱼邮件主题模式（invoice, payment, delivery, shipping）；恶意附件哈希特征：MD5前缀含d41d、a8ee等；C2域名模式*.emotet.cc、*.emotet.ru、*.emotet.net；注册表Run项HKCU\\...\\Run\\WindowsUpdateCheck；计划任务名称含WinInit、UpdateCheck。检测：邮件内容分析、注册表监控、计划任务审计。",
+    "keywords": ["Emotet", "IoC", "钓鱼邮件", "C2", "注册表", "计划任务"],
+    "severity": "high",
+    "mitigation": "邮件网关过滤，进程监控。"
+  },
+  {
+    "id": "ioc-004",
+    "category": "威胁指标",
+    "source": "威胁情报聚合",
+    "title": "TrickBot 已知IOC与C2基础设施",
+    "content": "TrickBot恶意软件已知指标：C2端口 8080/443/8443；域名模式*.trickbot.com、*.kewlb.com；DLL侧加载文件名：trick.dll, trickloader.exe, helper.dll；注册表Run键含trick特征；SMB横向传播特征（admin$共享访问）。检测：异常DLL加载（特别是System32目录下）、SMB大流量、进程树异常（explorer.exe加载trick.dll）。",
+    "keywords": ["TrickBot", "IOC", "C2", "DLL侧加载", "SMB", "trick.dll"],
+    "severity": "high",
+    "mitigation": "DNS过滤，EDR DLL加载监控。"
+  }
+]
