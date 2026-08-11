@@ -20,11 +20,14 @@ from rag import kb as knowledge_base
 # GAN 模块导入（可选，模型未加载时降级为规则引擎）
 try:
     from gan.detector import GANAnomalyDetector, GANAdversarialGenerator
+    from gan.prompt_adversarial import PromptAdversarialGenerator, PromptGuardTester
     GAN_AVAILABLE = True
 except ImportError:
     GAN_AVAILABLE = False
     GANAnomalyDetector = None
     GANAdversarialGenerator = None
+    PromptAdversarialGenerator = None
+    PromptGuardTester = None
 
 # 加载环境变量
 load_dotenv()
@@ -409,6 +412,47 @@ def gan_metrics():
         'note': '详细指标将在模型训练后填入',
     }
     return jsonify({'code': 0, 'message': '查询成功', 'data': metrics})
+
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 3: 红队测试接口
+# ═══════════════════════════════════════════════════════════════
+
+@app.route('/api/gan/redteam/test', methods=['POST'])
+def gan_redteam_test():
+    """
+    红队测试 — 生成对抗变体并测试 PromptGuard 逃逸率
+    POST { base_prompt: str, n_variants: int=20, variant_types: list|null }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        base_prompt = data.get('base_prompt', '你好，请帮我处理这个文件')
+        n_variants = int(data.get('n_variants') or 20)
+        variant_types = data.get('variant_types')
+
+        tester = PromptGuardTester()
+        result = tester.test(base_prompt, n_variants=n_variants,
+                             variant_types=variant_types)
+
+        return jsonify({
+            'code': 0,
+            'message': '红队测试完成',
+            'data': result
+        })
+    except Exception as e:
+        logger.error('红队测试失败: %s', e)
+        return jsonify({'code': 1, 'message': f'红队测试失败: {e}', 'data': None}), 500
+
+
+@app.route('/api/gan/redteam/report', methods=['GET'])
+def gan_redteam_report():
+    """查询最近一次红队测试报告"""
+    try:
+        tester = PromptGuardTester()
+        report = tester.get_report()
+        return jsonify({'code': 0, 'message': '查询成功', 'data': report})
+    except Exception as e:
+        return jsonify({'code': 1, 'message': str(e)}), 500
 
 
 if __name__ == '__main__':

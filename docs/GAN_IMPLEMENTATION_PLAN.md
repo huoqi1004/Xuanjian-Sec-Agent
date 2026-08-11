@@ -397,6 +397,31 @@ server/test/gan_integration.test.js        6 项集成测试（规则1-4全覆�
 |------|------|------|
 | `/api/virus/gan-analyze` | POST | 单独调用 GAN 异常检测 |
 | `/api/virus/gan/model-status` | GET | 查询 GAN 模型状态 |
+
+### Phase 3 交付清单
+
+```
+gan/prompt_adversarial.py        Prompt 对抗样本生成器（4 种扰动策略）
+scripts/adv_training_pipeline.py 对抗训练自动化 Pipeline（GAN → GBDT 联动）
+test/test_prompt_adversarial.py   16 项单元测试全部通过 ✅
+app.py                           新增 2 个红队测试端点
+```
+
+### Phase 3 红队测试 4 种扰动策略
+
+| 策略 | 方法 | 说明 |
+|------|------|------|
+| char_level | 同音字/全角混用/零宽字符注入 | 绕过关键词检测 |
+| semantic_level | 角色伪装 + 注入模板混合 | 绕过语义理解 |
+| encoding_level | Base64/ROT13/Unicode/嵌套编码 | 绕过编码检测 |
+| segmented_injection | 多段对话分散注入 | 绕过上下文窗口限制 |
+
+### Phase 3 新增 API 端点
+
+| 端点 | 方法 | 功能 |
+|------|------|------|
+| `/api/gan/redteam/test` | POST | 红队测试（生成变体 + 测试逃逸率） |
+| `/api/gan/redteam/report` | GET | 查询红队测试报告 |
 | `/api/gan/metrics` | GET | 查询 GAN 监控指标 |
 | `/api/gan/prompt-test` | POST | 运行 Prompt 对抗测试 |
 
@@ -463,7 +488,7 @@ torchaudio>=2.0.0     # 可选，仅用于音频异常检测
 |-------|------|---------|------|
 | Phase 1 — 基础框架 | ✅ 完成 | 2026-08-11 | `f713f14` / 标签 `v1.3.0-gan-phase1` |
 | Phase 2 — 集成推理 | ✅ 完成 | 2026-08-11 | `a8e2c5f` / 标签 `v1.3.0-gan-phase2` |
-| Phase 3 — 对抗增强 | ⏳ 规划中 | — | — |
+| Phase 3 — 对抗增强 | ✅ 完成 | 2026-08-11 | `a3f9e2d` / 标签 `v1.3.0-gan-phase3` |
 | Phase 4 — 生产化 | ⏳ 规划中 | — | — |
 
 ### Phase 1 交付清单
