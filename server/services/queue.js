@@ -40,6 +40,7 @@ class MemoryQueue extends EventEmitter {
     this.completedCount = 0;
     this.failedCount = 0;
     this._jobSeq = 0;
+    this._draining = false;  // 防重入标志，防止 _drain() 在 async 上下文中递归
   }
 
   process(name, handler) {
@@ -79,11 +80,17 @@ class MemoryQueue extends EventEmitter {
   }
 
   _drain() {
-    while (this.waiting.length > 0 && this.active.size < this.concurrency) {
-      const id = this.waiting.shift();
-      const job = this.jobs.get(id);
-      if (!job) continue;
-      this._run(job);
+    if (this._draining) return;  // 防止递归调用
+    this._draining = true;
+    try {
+      while (this.waiting.length > 0 && this.active.size < this.concurrency) {
+        const id = this.waiting.shift();
+        const job = this.jobs.get(id);
+        if (!job) continue;
+        this._run(job);
+      }
+    } finally {
+      this._draining = false;
     }
   }
 

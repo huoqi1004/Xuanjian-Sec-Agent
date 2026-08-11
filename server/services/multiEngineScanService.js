@@ -688,7 +688,8 @@ class MultiEngineScanService {
      */
     _recordGANMetrics(file, hashes, engineResultsMap, decision) {
         const ganResult = engineResultsMap['gan_anomaly'];
-        if (!ganResult || ganResult.status === 'skipped' || ganResult.status === 'error') {
+        // 仅 GAN 引擎明确跳过时才不记录（error 状态也要记录，便于监控可见性）
+        if (!ganResult || ganResult.status === 'skipped') {
             return;
         }
 
@@ -718,12 +719,11 @@ class MultiEngineScanService {
                 decision.ganBoosted ? 1 : 0,
                 decision.ganConflicted ? 1 : 0,
                 ganResult.responseTime || 0,
-                0,  // skipped
-                null,  // skip_reason
+                ganResult.status === 'error' ? 1 : 0,
+                ganResult.status === 'error' ? `gan_engine_error: ${ganResult.reason?.message || 'unknown'}` : null,
             );
-            logger.debug(`[GAN指标] 记录成功: ${file.path} | verdict=${decision.verdict} | recon_error=${(ganResult.reconstructionError || 0).toFixed(6)}`);
+            logger.debug(`[GAN指标] 记录成功: ${file.path} | verdict=${decision.verdict} | recon_error=${(ganResult.reconstructionError || 0).toFixed(6)} | status=${ganResult.status}`);
         } catch (error) {
-            // 表不存在时静默跳过（首次启动迁移可能尚未执行）
             logger.debug(`[GAN指标] 记录跳过（表未就绪）: ${error.message}`);
         }
     }

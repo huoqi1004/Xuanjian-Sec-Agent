@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import hashlib
+import threading
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -50,6 +51,7 @@ class GANVersionManager:
         """
         self.max_versions_per_type = max_versions_per_type
         self.in_memory_models: Dict[str, List[Dict]] = {}
+        self._lock = threading.Lock()  # 保护 in_memory_models 的并发读写
 
         if db_path:
             self.db_path = db_path
@@ -359,31 +361,34 @@ class GANVersionManager:
     # ── 内存回退方法 ──────────────────────────────────────────
 
     def _save_to_memory(self, model_type: str, record: Dict):
-        if model_type not in self.in_memory_models:
-            self.in_memory_models[model_type] = []
-        # 更新已存在的版本
-        existing = [m for m in self.in_memory_models[model_type]
-                    if m['version'] == record['version']]
-        if existing:
-            existing[0].update(record)
-        else:
-            self.in_memory_models[model_type].append(record)
+        with self._lock:
+            if model_type not in self.in_memory_models:
+                self.in_memory_models[model_type] = []
+            # 更新已存在的版本
+            existing = [m for m in self.in_memory_models[model_type]
+                        if m['version'] == record['version']]
+            if existing:
+                existing[0].update(record)
+            else:
+                self.in_memory_models[model_type].append(record)
 
     def _deploy_memory(self, model_type: str, version: str, now: str):
-        models = self.in_memory_models.get(model_type, [])
-        for m in models:
-            if m.get('status') == STATUS_DEPLOYED:
-                m['status'] = STATUS_DEPRECATED
-        for m in models:
-            if m.get('version') == version:
-                m['status'] = STATUS_DEPLOYED
-                m['deployed_at'] = now
+        with self._lock:
+            models = self.in_memory_models.get(model_type, [])
+            for m in models:
+                if m.get('status') == STATUS_DEPLOYED:
+                    m['status'] = STATUS_DEPRECATED
+            for m in models:
+                if m.get('version') == version:
+                    m['status'] = STATUS_DEPLOYED
+                    m['deployed_at'] = now
 
     def _deprecate_model(self, model_type: str, version: str):
-        models = self.in_memory_models.get(model_type, [])
-        for m in models:
-            if m.get('version') == version and m.get('status') != STATUS_DEPRECATED:
-                m['status'] = STATUS_DEPRECATED
+        with self._lock:
+            models = self.in_memory_models.get(model_type, [])
+            for m in models:
+                if m.get('version') == version and m.get('status') != STATUS_DEPRECATED:
+                    m['status'] = STATUS_DEPRECATED
 
     # ── 类方法：便捷接口 ──────────────────────────────────────
 

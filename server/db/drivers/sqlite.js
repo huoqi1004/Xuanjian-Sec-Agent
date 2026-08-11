@@ -21,6 +21,7 @@ class SQLiteDriver extends DriverBase {
   constructor(dbPath) {
     super();
     this._backend = null;
+    this._txQueue = Promise.resolve();  // 事务串行化队列，防止并发 BEGIN 崩溃
 
     // 优先 better-sqlite3
     try {

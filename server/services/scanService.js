@@ -242,8 +242,9 @@ async function startScan(params) {
     created_by
   );
 
-  // 任务上下文（供取消/进度追踪）
+  // 任务上下文（供取消/进度追踪）— 原子写入，防止并发同 scanId 覆盖
   const taskInfo = { hosts, ports, totalHosts: hosts.length, scannedHosts: 0 };
+  if (activeTasks.has(taskId)) return activeTasks.get(taskId);
   activeTasks.set(taskId, taskInfo);
 
   // 需审批：挂起等待管理员审批，不进入执行队列

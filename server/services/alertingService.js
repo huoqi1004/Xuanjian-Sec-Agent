@@ -14,14 +14,19 @@ const logger = require('../utils/logger');
 const metrics = require('../utils/metrics');
 const { getQueue } = require('./queue');
 
-// 最近一次健康检查快照
-const lastCheck = {
+// 最近一次健康检查快照（写入时深拷贝，防止并发修改）
+let lastCheck = {
   ts: null,
   aiOk: false,
   aiLatencyMs: 0,
   memUsageRatio: 0,
   checks: []
 };
+
+/** 原子写入 lastCheck 快照（防止并发健康检查写入覆盖） */
+function updateLastCheck(updates) {
+  lastCheck = { ...lastCheck, ...updates };
+}
 
 function upsertSystemAlert(db, relatedAsset, severity, confidence, description) {
   const existing = db.prepare("SELECT * FROM alert_records WHERE alert_type = 'system_health'").all();
@@ -69,8 +74,7 @@ async function checkSystemHealth() {
   // 1. AI 服务可达性
   const ai = await checkAiService();
   checks.push({ name: 'ai_service', ok: ai.ok, detail: ai.detail });
-  lastCheck.aiOk = ai.ok;
-  lastCheck.aiLatencyMs = ai.latency;
+  updateLastCheck({ aiOk: ai.ok, aiLatencyMs: ai.latency });
 
   // 2. 进程内存占用（RSS / 物理内存）
   const memUsageRatio = process.memoryUsage().rss / os.totalmem();
@@ -84,7 +88,7 @@ async function checkSystemHealth() {
   if (!memOk) {
     upsertSystemAlert(db(), 'server', 'critical', 0.9, `系统健康: 内存占用率超阈值 ${(memUsageRatio * 100).toFixed(1)}%`);
   }
-  lastCheck.memUsageRatio = memUsageRatio;
+  updateLastCheck({ memUsageRatio });
 
   // 3. 任务队列积压
   const queueStats = getQueue().stats();
@@ -106,8 +110,7 @@ async function checkSystemHealth() {
     upsertSystemAlert(db(), 'ai-service', 'warning', 0.8, `系统健康: AI 调用失败率 ${(failRate * 100).toFixed(1)}% 超过阈值`);
   }
 
-  lastCheck.ts = new Date().toISOString();
-  lastCheck.checks = checks;
+  updateLastCheck({ ts: new Date().toISOString(), checks });
 
   if (!ai.ok || !memOk || !queueOk || !failRateOk) {
     logger.warn(`[健康巡检] 存在异常项: ${checks.filter((c) => !c.ok).map((c) => c.name).join(', ')}`);

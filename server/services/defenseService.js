@@ -8,6 +8,8 @@ const logger = require('../utils/logger');
 const engines = new Map();
 // 冷却追踪
 const cooldowns = new Map();
+// 冷却锁 Map（每个 policyId 一个 Promise 链，保证 check+set 原子性）
+const cooldownLocks = new Map();
 
 // WebSocket广播函数（由server.js设置）
 let broadcastFn = null;
@@ -147,7 +149,7 @@ function buildEngine(policyId, conditions) {
 }
 
 /**
- * 评估策略
+ * 冷却检查（原子：检查+设置在同一锁内完成）
  */
 async function evaluatePolicies(facts) {
   const db = getDb();
@@ -156,8 +158,8 @@ async function evaluatePolicies(facts) {
   const triggeredPolicies = [];
 
   for (const policy of policies) {
-    // 检查冷却
-    if (isInCooldown(policy.id, policy.cooldown)) {
+    // 检查冷却（加锁保证原子性）
+    if (await isInCooldown(policy.id, policy.cooldown)) {
       continue;
     }
 
@@ -185,7 +187,7 @@ async function evaluatePolicies(facts) {
   // 执行触发的策略动作（异步化：入队执行，避免阻塞评估主流程；大量策略同时触发时由队列控制并发与重试）
   for (const policy of triggeredPolicies) {
     getQueue().add('defense_actions', { policy, facts }, { attempts: 2, backoff: 3000 });
-    setCooldown(policy.id, policy.cooldown);
+    await setCooldown(policy.id, policy.cooldown);
   }
 
   return triggeredPolicies;
@@ -327,19 +329,31 @@ async function executePolicyActions(policy, facts) {
 }
 
 /**
- * 冷却检查
+ * 冷却检查（原子：check+set 在同一锁内完成）
  */
-function isInCooldown(policyId, cooldownSeconds) {
-  const lastTrigger = cooldowns.get(policyId);
-  if (!lastTrigger) return false;
-  return (Date.now() - lastTrigger) < (cooldownSeconds * 1000);
+async function isInCooldown(policyId, cooldownSeconds) {
+  const lock = cooldownLocks.get(policyId) || Promise.resolve();
+  return lock.then(() => {
+    const lastTrigger = cooldowns.get(policyId);
+    if (!lastTrigger) return false;
+    return (Date.now() - lastTrigger) < (cooldownSeconds * 1000);
+  });
 }
 
 /**
- * 设置冷却
+ * 设置冷却（原子：check+set 在同一锁内完成）
  */
-function setCooldown(policyId, cooldownSeconds) {
-  cooldowns.set(policyId, Date.now());
+async function setCooldown(policyId, cooldownSeconds) {
+  const prev = cooldownLocks.get(policyId) || Promise.resolve();
+  const next = prev.then(() => {
+    cooldowns.set(policyId, Date.now());
+  });
+  cooldownLocks.set(policyId, next);
+  // 清理已完成/失败的锁
+  next.catch(() => {
+    if (cooldownLocks.get(policyId) === next) cooldownLocks.delete(policyId);
+  });
+  return next;
 }
 
 /**

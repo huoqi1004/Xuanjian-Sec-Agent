@@ -50,38 +50,36 @@ class GANMetricsCollector:
     def _init_db(self):
         """初始化数据库表"""
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.execute('''
-                CREATE TABLE IF NOT EXISTS gan_scan_metrics (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    scan_id INTEGER,
-                    file_path TEXT NOT NULL,
-                    file_hash_md5 TEXT,
-                    file_size_bytes INTEGER DEFAULT 0,
-                    model_version TEXT,
-                    recon_error REAL DEFAULT 0,
-                    is_anomaly INTEGER DEFAULT 0,
-                    anomaly_score REAL DEFAULT 0,
-                    confidence REAL DEFAULT 0,
-                    verdict TEXT DEFAULT 'unknown',
-                    engine_verdict TEXT,
-                    engine_confidence REAL,
-                    vote_merged INTEGER DEFAULT 0,
-                    gan_boosted INTEGER DEFAULT 0,
-                    gan_conflicted INTEGER DEFAULT 0,
-                    response_time_ms INTEGER DEFAULT 0,
-                    skipped INTEGER DEFAULT 0,
-                    skip_reason TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            ''')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_scan ON gan_scan_metrics(scan_id)')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_hash ON gan_scan_metrics(file_hash_md5)')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_verdict ON gan_scan_metrics(verdict)')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_created ON gan_scan_metrics(created_at)')
-            conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_anomaly ON gan_scan_metrics(is_anomaly)')
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(self.db_path) as conn:
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS gan_scan_metrics (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        scan_id INTEGER,
+                        file_path TEXT NOT NULL,
+                        file_hash_md5 TEXT,
+                        file_size_bytes INTEGER DEFAULT 0,
+                        model_version TEXT,
+                        recon_error REAL DEFAULT 0,
+                        is_anomaly INTEGER DEFAULT 0,
+                        anomaly_score REAL DEFAULT 0,
+                        confidence REAL DEFAULT 0,
+                        verdict TEXT DEFAULT 'unknown',
+                        engine_verdict TEXT,
+                        engine_confidence REAL,
+                        vote_merged INTEGER DEFAULT 0,
+                        gan_boosted INTEGER DEFAULT 0,
+                        gan_conflicted INTEGER DEFAULT 0,
+                        response_time_ms INTEGER DEFAULT 0,
+                        skipped INTEGER DEFAULT 0,
+                        skip_reason TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                ''')
+                conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_scan ON gan_scan_metrics(scan_id)')
+                conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_hash ON gan_scan_metrics(file_hash_md5)')
+                conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_verdict ON gan_scan_metrics(verdict)')
+                conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_created ON gan_scan_metrics(created_at)')
+                conn.execute('CREATE INDEX IF NOT EXISTS idx_gsm_anomaly ON gan_scan_metrics(is_anomaly)')
             logger.info('GAN 指标数据库已初始化: %s', self.db_path)
         except Exception as e:
             logger.error('指标数据库初始化失败: %s', e)
@@ -203,71 +201,69 @@ class GANMetricsCollector:
             return self._get_memory_summary(hours)
 
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
 
-            # 总量统计
-            total = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
+                # 总量统计
+                total = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
-            # 异常统计
-            anomalies = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE is_anomaly = 1 AND created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
+                # 异常统计
+                anomalies = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE is_anomaly = 1 AND created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
-            # 跳过统计
-            skipped = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE skipped = 1 AND created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
+                # 跳过统计
+                skipped = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE skipped = 1 AND created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
-            # 平均响应时间
-            avg_rt = conn.execute(
-                "SELECT AVG(response_time_ms) as avg_ms FROM gan_scan_metrics WHERE created_at >= ?",
-                (since,)
-            ).fetchone()['avg_ms'] or 0
+                # 平均响应时间
+                avg_rt = conn.execute(
+                    "SELECT AVG(response_time_ms) as avg_ms FROM gan_scan_metrics WHERE created_at >= ?",
+                    (since,)
+                ).fetchone()['avg_ms'] or 0
 
-            # 按 verdict 统计
-            verdict_dist = conn.execute(
-                """SELECT verdict, COUNT(*) as cnt
-                   FROM gan_scan_metrics
-                   WHERE created_at >= ? AND skipped = 0
-                   GROUP BY verdict""",
-                (since,)
-            ).fetchall()
+                # 按 verdict 统计
+                verdict_dist = conn.execute(
+                    """SELECT verdict, COUNT(*) as cnt
+                       FROM gan_scan_metrics
+                       WHERE created_at >= ? AND skipped = 0
+                       GROUP BY verdict""",
+                    (since,)
+                ).fetchall()
 
-            # 按模型版本统计
-            version_dist = conn.execute(
-                """SELECT model_version, COUNT(*) as cnt,
-                          AVG(recon_error) as avg_recon,
-                          AVG(response_time_ms) as avg_rt
-                   FROM gan_scan_metrics
-                   WHERE created_at >= ? AND skipped = 0
-                   GROUP BY model_version
-                   ORDER BY cnt DESC""",
-                (since,)
-            ).fetchall()
+                # 按模型版本统计
+                version_dist = conn.execute(
+                    """SELECT model_version, COUNT(*) as cnt,
+                              AVG(recon_error) as avg_recon,
+                              AVG(response_time_ms) as avg_rt
+                       FROM gan_scan_metrics
+                       WHERE created_at >= ? AND skipped = 0
+                       GROUP BY model_version
+                       ORDER BY cnt DESC""",
+                    (since,)
+                ).fetchall()
 
-            # GAN 投票融合统计
-            vote_merged = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE vote_merged = 1 AND created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
+                # GAN 投票融合统计
+                vote_merged = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE vote_merged = 1 AND created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
-            gan_boosted = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE gan_boosted = 1 AND created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
+                gan_boosted = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE gan_boosted = 1 AND created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
-            gan_conflicted = conn.execute(
-                "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE gan_conflicted = 1 AND created_at >= ?",
-                (since,)
-            ).fetchone()['cnt']
-
-            conn.close()
+                gan_conflicted = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM gan_scan_metrics WHERE gan_conflicted = 1 AND created_at >= ?",
+                    (since,)
+                ).fetchone()['cnt']
 
             return {
                 'period_hours': hours,
@@ -313,31 +309,30 @@ class GANMetricsCollector:
             return []
 
         try:
-            conn = sqlite3.connect(self.db_path)
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                """SELECT
-                       datetime(created_at, 'localtime') as time_slot,
-                       COUNT(*) as total,
-                       SUM(CASE WHEN is_anomaly = 1 THEN 1 ELSE 0 END) as anomalies,
-                       AVG(response_time_ms) as avg_rt
-                   FROM gan_scan_metrics
-                   WHERE created_at >= ?
-                   GROUP BY strftime('%Y-%m-%d %H:00', created_at)
-                   ORDER BY time_slot""",
-                (since,)
-            ).fetchall()
-            conn.close()
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                rows = conn.execute(
+                    """SELECT
+                           datetime(created_at, 'localtime') as time_slot,
+                           COUNT(*) as total,
+                           SUM(CASE WHEN is_anomaly = 1 THEN 1 ELSE 0 END) as anomalies,
+                           AVG(response_time_ms) as avg_rt
+                       FROM gan_scan_metrics
+                       WHERE created_at >= ?
+                       GROUP BY strftime('%Y-%m-%d %H:00', created_at)
+                       ORDER BY time_slot""",
+                    (since,)
+                ).fetchall()
 
-            return [
-                {
-                    'time': r['time_slot'],
-                    'total': r['total'],
-                    'anomalies': r['anomalies'],
-                    'avg_response_time_ms': round(r['avg_rt'], 2) if r['avg_rt'] else 0,
-                }
-                for r in rows
-            ]
+                return [
+                    {
+                        'time': r['time_slot'],
+                        'total': r['total'],
+                        'anomalies': r['anomalies'],
+                        'avg_response_time_ms': round(r['avg_rt'], 2) if r['avg_rt'] else 0,
+                    }
+                    for r in rows
+                ]
         except Exception as e:
             logger.error('趋势查询失败: %s', e)
             return []
@@ -361,14 +356,12 @@ class GANMetricsCollector:
 
         cutoff = (datetime.now() - timedelta(days=self.retention_days)).isoformat()
         try:
-            conn = sqlite3.connect(self.db_path)
-            result = conn.execute(
-                "DELETE FROM gan_scan_metrics WHERE created_at < ?",
-                (cutoff,)
-            )
-            deleted = result.rowcount
-            conn.commit()
-            conn.close()
+            with sqlite3.connect(self.db_path) as conn:
+                result = conn.execute(
+                    "DELETE FROM gan_scan_metrics WHERE created_at < ?",
+                    (cutoff,)
+                )
+                deleted = result.rowcount
             logger.info('已清理 %d 条过期 GAN 指标数据（> %d 天）', deleted, self.retention_days)
         except Exception as e:
             logger.error('数据清理失败: %s', e)

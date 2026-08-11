@@ -302,7 +302,7 @@ async function startServer(options = {}) {
           return ws.terminate();
         }
         ws.isAlive = false;
-        ws.ping();
+        ws.ping().catch(() => { ws.isAlive = false; ws.terminate(); });
       });
     }, 30000);
 
@@ -326,7 +326,9 @@ async function startServer(options = {}) {
     nodeCron.schedule('* * * * *', () => {
       try {
         const deviceService = require('./services/deviceService');
-        deviceService.checkHeartbeats();
+        deviceService.checkHeartbeats().catch((err) => {
+          logger.error('设备心跳检测失败:', err.message);
+        });
       } catch (err) {
         logger.error('设备心跳检测失败:', err.message);
       }

@@ -24,6 +24,8 @@ class MySQLDriver extends DriverBase {
       database: opts.database || 'xuanjian',
       waitForConnections: true,
       connectionLimit: 10,
+      connectionTimeout: 5000,
+      acquireTimeout: 5000,
       namedPlaceholders: false,
       charset: 'utf8mb4'
     });

@@ -215,9 +215,9 @@ async function analyzeWithWasmSandbox(filePath) {
   const tAfterWasm = performance.now();
 
   if (wasmModule) {
-    // TODO: 实现 WASM 字节码执行分析
-    // 当前阶段：WASM 模块未就绪，使用启发式分析
-    logger.info('[WasmSandbox] WASM 模块存在但未实现，降级为启发式分析');
+    // WASM 原生分析功能暂未实现，继续使用启发式降级方案
+    // TODO: 部署 WASM 字节码分析模块后启用原生路径
+    logger.info('[WasmSandbox] WASM 模块已加载，原生分析功能待部署');
   } else {
     logger.debug(`[WasmSandbox] WASM 模块不可用，总加载耗时=${(tAfterWasm - t0).toFixed(2)}ms`);
   }
