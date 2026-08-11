@@ -104,6 +104,13 @@ def detect_batch(self, file_paths):
 ✅ prompt_adversarial.py      — 16/16 测试通过（max_results 限制生效）
 ✅ gan_integration.test.js    — 6/6 测试通过（投票逻辑正常）
 ✅ test_gan.py                — 22/22 测试通过
+
+Phase 5 修复后：
+✅ 69/69 测试全部通过
+✅ 360 Ti/VirusDB 重复 API 已合并（节省 1 次请求/扫描）
+✅ 单文件读取从 3 次降至 1 次
+✅ GAN batch 推理改为单次前向传播
+✅ getScanHistory 改用 SQL 分页
 ```
 
 ## 五、当前内存占用估算
