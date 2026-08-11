@@ -279,6 +279,10 @@ async function startServer(options = {}) {
         frontendClients.delete(ws);
         logger.error('前端WebSocket客户端错误:', err.message);
       });
+      // HTTP upgrade 后若连接在未发送数据前关闭，确保清理
+      ws.on('finish', () => {
+        frontendClients.delete(ws);
+      });
     });
 
     function broadcastToFrontend(type, data) {

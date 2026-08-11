@@ -9,6 +9,7 @@ import os
 from typing import Dict, List, Optional
 
 import torch
+import torch.nn.functional as F
 
 from .anomaly_gan import AnomalyGAN, DEFAULT_INPUT_DIM, DEFAULT_LATENT_DIM
 from .adversarial_gan import AdversarialMalwareGAN, DEFAULT_FEATURE_DIM
@@ -112,8 +113,53 @@ class GANAnomalyDetector:
             }
 
     def detect_batch(self, file_paths: List[str]) -> List[Dict]:
-        """批量检测多个文件"""
-        return [self.detect(p) for p in file_paths]
+        """
+        批量检测多个文件（单次预处理 + 单次模型前向，性能优于逐个检测）。
+        """
+        if not self.model_loaded:
+            return [{
+                'is_anomaly': False,
+                'reconstruction_error': 0.0,
+                'anomaly_score': 0.0,
+                'confidence': 0.0,
+                'model_version': self.model_version,
+                'error': 'GAN 模型未加载',
+            } for _ in file_paths]
+
+        # 批量预处理
+        tensors = []
+        for fp in file_paths:
+            try:
+                t = self.preprocessor.transform(fp).to(self.device)
+                tensors.append(t)
+            except Exception as e:
+                logger.error("批量预处理失败: %s, error=%s", fp, e)
+                tensors.append(torch.zeros(1, self.preprocessor.input_dim, device=self.device))
+
+        if not tensors:
+            return []
+
+        # 堆叠为批次，单次前向传播
+        batch = torch.cat(tensors, dim=0)  # (N, input_dim)
+        with torch.no_grad():
+            x_recon, _, d_out = self.model.forward(batch)
+            recon_err = F.mse_loss(x_recon, batch, reduction='none').mean(dim=1)  # (N,)
+            disc_anomaly = (1.0 - d_out.squeeze(-1))  # (N,)
+            score = 0.7 * recon_err + 0.3 * disc_anomaly
+
+        results = []
+        for i, fp in enumerate(file_paths):
+            r_err = recon_err[i].item()
+            is_anomaly = r_err > self.anomaly_threshold
+            confidence = max(0.0, min(1.0, 1.0 - r_err))
+            results.append({
+                'is_anomaly': bool(is_anomaly),
+                'reconstruction_error': round(r_err, 6),
+                'anomaly_score': round(score[i].item(), 6),
+                'confidence': round(confidence, 4),
+                'model_version': self.model_version,
+            })
+        return results
 
     def get_status(self) -> Dict:
         """返回检测器状态"""

@@ -109,14 +109,10 @@ class AnomalyGAN(nn.Module):
                       disc_weight: float = 0.3) -> torch.Tensor:
         """
         综合异常分数 = recon_weight × 重构误差 + disc_weight × (1 - D输出)
-        分数越高 → 越异常。
-
-        Args:
-            x:             输入 (batch, input_dim)
-            recon_weight:  重构误差权重（默认 0.7）
-            disc_weight:   判别器权重（默认 0.3）
+        分数越高 → 越异常。复用 reconstruct_error 避免重复 forward。
         """
         x_recon, _, d_out = self.forward(x)
+        # 复用 reconstruct_error 的重构误差计算，避免重复 forward
         recon_err = F.mse_loss(x_recon, x, reduction='none').mean(dim=1)  # (batch,)
         # D 输出越接近 0 → 重构越不像真实数据 → 越异常
         disc_anomaly = (1.0 - d_out.squeeze(-1))  # (batch,)

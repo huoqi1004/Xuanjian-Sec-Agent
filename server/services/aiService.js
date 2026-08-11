@@ -1287,11 +1287,31 @@ function estimateTokens(text) {
 }
 
 /**
- * 计算消息列表的总 token 估算值
+ * Token 估算缓存（避免高频重复计算）
+ * key: messages 的 JSON 字符串哈希，value: token 数
+ */
+const _tokenEstimateCache = new Map();
+const MAX_TOKEN_CACHE = 1000;
+
+/**
+ * 计算消息列表的总 token 估算值（带简单缓存）
  */
 function estimateTokensForMessages(messages) {
   if (!Array.isArray(messages)) return 0;
-  return messages.reduce((sum, m) => sum + estimateTokens(m.content || ''), 0);
+  // 用引用 ID 做缓存 key（messages 对象不变时复用结果）
+  const cacheKey = messages.length + ':' + messages.map(m => m.content?.length || 0).join(',');
+  const cached = _tokenEstimateCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  const total = messages.reduce((sum, m) => sum + estimateTokens(m.content || ''), 0);
+
+  // LRU 淘汰：超出上限时移除最旧的条目
+  if (_tokenEstimateCache.size >= MAX_TOKEN_CACHE) {
+    const firstKey = _tokenEstimateCache.keys().next().value;
+    _tokenEstimateCache.delete(firstKey);
+  }
+  _tokenEstimateCache.set(cacheKey, total);
+  return total;
 }
 
 /**

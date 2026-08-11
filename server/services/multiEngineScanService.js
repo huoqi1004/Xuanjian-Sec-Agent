@@ -187,7 +187,7 @@ class MultiEngineScanService {
     }
 
     /**
-     * 计算文件哈希
+     * 计算文件哈希（一次读取，并行计算 MD5/SHA1/SHA256）
      */
     _calculateHashes(filePath) {
         const data = fs.readFileSync(filePath);
@@ -196,6 +196,23 @@ class MultiEngineScanService {
             sha1: crypto.createHash('sha1').update(data).digest('hex'),
             sha256: crypto.createHash('sha256').update(data).digest('hex')
         };
+    }
+
+    /**
+     * 计算文件熵值（统一实现，供各引擎复用）
+     */
+    _calcEntropy(data) {
+        const freq = new Uint32Array(256);
+        for (let i = 0; i < data.length; i++) freq[data[i]]++;
+        let ent = 0;
+        const len = data.length;
+        for (let i = 0; i < 256; i++) {
+            if (freq[i] > 0) {
+                const p = freq[i] / len;
+                ent -= p * Math.log2(p);
+            }
+        }
+        return ent;
     }
 
     /**
@@ -464,29 +481,26 @@ class MultiEngineScanService {
     /**
      * 引擎7: 文件熵值分析（无Key，内置）
      * 通过文件熵值和统计特征判断是否可疑
+     * @param {Buffer|null} fileData - 已读取的文件数据（由 scanFile 传入，避免重复读取）
      */
-    _scanFileEntropy(filePath) {
+    _scanFileEntropy(fileData) {
         const start = Date.now();
         try {
-            const data = fs.readFileSync(filePath);
+            // 优先使用已读取的数据，回退到文件路径读取
+            let data;
+            if (fileData) {
+                data = fileData;
+            } else {
+                data = fs.readFileSync(file.path);
+            }
             const fileSize = data.length;
-            logger.info(`[文件熵值分析] 开始分析: ${filePath} | 文件大小: ${fileSize} bytes`);
+            logger.info(`[文件熵值分析] 开始分析: ${file.path || 'unknown'} | 文件大小: ${fileSize} bytes`);
             if (fileSize === 0) {
                 return { engine: '文件熵值分析', status: 'completed', verdict: 'unknown', confidence: 0, detail: '空文件', responseTime: Date.now() - start };
             }
 
-            const byteFreq = new Uint32Array(256);
-            for (let i = 0; i < data.length; i++) {
-                byteFreq[data[i]]++;
-            }
-
-            let entropy = 0;
-            for (let i = 0; i < 256; i++) {
-                if (byteFreq[i] > 0) {
-                    const p = byteFreq[i] / fileSize;
-                    entropy -= p * Math.log2(p);
-                }
-            }
+            const ent = this._calcEntropy(data);
+            const entropy = ent;
 
             let verdict = 'clean';
             let confidence = 0;
@@ -934,10 +948,13 @@ class MultiEngineScanService {
 
     /**
      * 启发式本地沙箱分析（Python 服务不可用时的降级方案）
+     * @param {string} filePath - 文件路径
+     * @param {Object} hashes - 文件哈希
+     * @param {Buffer|null} fileData - 已读取的文件数据（由 scanFile 传入）
      */
-    _heuristicSandboxAnalysis(filePath, hashes) {
+    _heuristicSandboxAnalysis(filePath, hashes, fileData = null) {
         try {
-            const data = fs.readFileSync(filePath);
+            const data = fileData || fs.readFileSync(filePath);
             const fileSize = data.length;
             const entropy = require('./aiService').calculateEntropy ?
                 this._calcEntropy(data) : 0;
@@ -966,18 +983,7 @@ class MultiEngineScanService {
             }
 
             // 高熵 + 加密特征
-            const calcEntropy = (buffer) => {
-                const freq = new Map();
-                for (const byte of buffer) freq.set(byte, (freq.get(byte) || 0) + 1);
-                let ent = 0;
-                const len = buffer.length;
-                for (const count of freq.values()) {
-                    const p = count / len;
-                    ent -= p * Math.log2(p);
-                }
-                return ent;
-            };
-            const ent = calcEntropy(data);
+            const ent = this._calcEntropy(data);
             if (ent > 7.8) { score += 0.3; behaviors.push(`高熵(${ent.toFixed(2)})，可能加密/混淆`); }
             else if (ent > 7.0) { score += 0.15; behaviors.push(`熵值偏高(${ent.toFixed(2)})`); }
 
