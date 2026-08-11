@@ -26,8 +26,19 @@ const config = {
     model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
     maxTokens: parseInt(process.env.DEEPSEEK_MAX_TOKENS) || 4096
   },
+  agnes: {
+    apiKey: process.env.ANGES_API_KEY || process.env.LLM_API_KEY || '',
+    apiBase: process.env.ANGES_API_BASE || process.env.LLM_API_BASE || 'https://api.openai.com/v1',
+    model: process.env.ANGES_MODEL || process.env.LLM_MODEL || 'agnes-2.5-flash',
+    maxTokens: parseInt(process.env.ANGES_MAX_TOKENS) || 8192
+  },
   virusTotal: {
     apiKey: process.env.VIRUSTOTAL_API_KEY || ''
+  },
+  virusScan: {
+    enabled: process.env.VIRUS_SCAN_ENABLED === 'true',
+    cron: process.env.VIRUS_SCAN_CRON || '0 3 * * *',
+    watchDirs: (process.env.VIRUS_SCAN_WATCH_DIRS || './uploads,./data').split(',').map(s => s.trim()).filter(Boolean)
   },
   llm: {
     apiKey: process.env.LLM_API_KEY || '',
