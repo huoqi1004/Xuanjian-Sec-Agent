@@ -7,6 +7,7 @@ const { config } = require('../config');
 const { getDb } = require('../db/database');
 const aiService = require('./aiService');
 const GANVersionService = require('./ganVersionService');
+const wasmSandboxService = require('./wasmSandboxService');
 
 /**
  * 多引擎病毒查杀服务（增强版）
@@ -926,12 +927,35 @@ class MultiEngineScanService {
     /**
      * 零日威胁动态沙箱分析
      * 当所有静态引擎均返回 unknown 且文件熵值异常时触发
-     * 优先调用 Python AI 微服务，失败时降级为启发式本地分析
+     * 优先级：Python AI 微服务 → WASM/软 WASM 分析 → 启发式本地分析
+     * @param {Object} file - 文件对象
+     * @param {Object} hashes - 文件哈希
+     * @param {Buffer|null} fileData - 已读取的文件数据（由 scanFile 传入，避免重复读文件）
      */
-    async _sandboxAnalysis(file, hashes) {
+    async _sandboxAnalysis(file, hashes, fileData = null) {
         const start = Date.now();
+
+        // 1. 优先尝试 WASM/软 WASM 沙箱分析（本地，无需 Python 服务）
         try {
-            // 调用 Python AI 微服务的沙箱分析接口
+            const wasmResult = await wasmSandboxService.analyzeWithWasmSandbox(file.path);
+            if (wasmResult && wasmResult.verdict) {
+                logger.info(`[沙箱] WASM 沙箱分析完成: verdict=${wasmResult.verdict} | confidence=${wasmResult.confidence.toFixed(2)} | engine=${wasmResult.engine}`);
+                return {
+                    engine: 'WASM沙箱',
+                    status: 'completed',
+                    verdict: wasmResult.verdict,
+                    confidence: wasmResult.confidence,
+                    detail: `WASM沙箱(${wasmResult.engine}): ${wasmResult.verdict}`,
+                    behavior_summary: wasmResult.behaviors || null,
+                    responseTime: Date.now() - start
+                };
+            }
+        } catch (e) {
+            logger.warn(`[沙箱] WASM 沙箱分析失败，降级: ${e.message}`);
+        }
+
+        // 2. 降级：Python AI 微服务沙箱分析
+        try {
             const result = await aiService.callAiServiceFileDetection('/api/analyze/sandbox', file.path);
             if (result && typeof result.verdict === 'string') {
                 const verdictMap = { 'malicious': 'malicious', 'suspicious': 'suspicious', 'clean': 'clean', 'unknown': 'suspicious' };
@@ -949,7 +973,7 @@ class MultiEngineScanService {
             logger.warn(`[沙箱] Python 微服务调用失败，降级为启发式分析: ${e.message}`);
         }
 
-        // 降级：启发式本地沙箱分析
+        // 3. 最终降级：启发式本地沙箱分析
         const info = this._heuristicSandboxAnalysis(file.path, hashes, fileData);
         logger.info(`[沙箱] 启发式分析完成: verdict=${info.verdict} | confidence=${info.confidence.toFixed(2)}`);
         return {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { agentApi, virusApi } from '@/api';
 import type { VirusRecord } from '@/api';
 import Badge from '@/components/ui/badge';
@@ -110,6 +110,10 @@ export default function AgentWorkbench() {
   const [confirming, setConfirming] = useState(false);
   /** 服务端等待确认队列（10s 轮询） */
   const [pending, setPending] = useState<any[]>([]);
+  /** 最近一次查杀结果（从 agent 结果中提取） */
+  const [lastVirusResult, setLastVirusResult] = useState<VirusRecord | null>(null);
+  /** 处置操作加载状态 */
+  const [virusActionLoading, setVirusActionLoading] = useState<string | null>(null);
 
   const fetchTools = useCallback(async () => {
     try {

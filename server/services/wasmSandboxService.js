@@ -13,7 +13,11 @@ const { getDb } = require('../db/database');
 const metrics = require('../utils/metrics');
 
 const WASM_MODULE_PATH = path.join(__dirname, '../assets', 'sandbox.wasm');
+const SOFT_ANALYZER_PATH = path.join(__dirname, '../assets', 'wasm', 'analyzer.js');
+
 let wasmInstance = null;
+let softAnalyzer = null;
+let analysisMode = 'none'; // 'native' | 'soft' | 'heuristic'
 
 /**
  * 计算文件哈希
@@ -36,54 +40,68 @@ function hashFile(filePath) {
 }
 
 /**
- * 尝试加载 WASM 模块（首次调用时）
+ * 初始化分析器（启动时调用，缓存 wasmInstance 和 softAnalyzer）
+ */
+async function initAnalysisMode() {
+  // 1. 尝试加载原生 WASM
+  if (fs.existsSync(WASM_MODULE_PATH)) {
+    try {
+      const wasmBuffer = fs.readFileSync(WASM_MODULE_PATH);
+      wasmInstance = await WebAssembly.compile(wasmBuffer);
+      analysisMode = 'native';
+      logger.info(`[WasmSandbox] 原生 WASM 加载成功: size=${wasmBuffer.length}B`);
+      metrics.inc('wasm_module_loaded', 1);
+      return;
+    } catch (e) {
+      logger.warn(`[WasmSandbox] 原生 WASM 加载失败: ${e.message}，降级到软 WASM`);
+    }
+  }
+
+  // 2. 尝试加载 JS 软 WASM
+  if (fs.existsSync(SOFT_ANALYZER_PATH)) {
+    try {
+      softAnalyzer = require(SOFT_ANALYZER_PATH);
+      analysisMode = 'soft';
+      logger.info('[WasmSandbox] JS 软 WASM 加载成功（server/assets/wasm/analyzer.js）');
+      metrics.inc('wasm_soft_loaded', 1);
+      return;
+    } catch (e) {
+      logger.warn(`[WasmSandbox] 软 WASM 加载失败: ${e.message}，使用启发式分析`);
+    }
+  }
+
+  // 3. 最终降级：启发式分析
+  analysisMode = 'heuristic';
+  logger.info('[WasmSandbox] 无可用分析器，使用纯启发式分析');
+  metrics.inc('wasm_heuristic_fallback', 1);
+}
+
+// 启动时初始化
+initAnalysisMode().catch(e => logger.error(`[WasmSandbox] 初始化失败: ${e.message}`));
+
+/**
+ * 尝试加载原生 WASM 模块（已废弃，由 initAnalysisMode 统一管理）
+ * @deprecated 请使用 initAnalysisMode()
  */
 async function loadWasmModule() {
-  if (wasmInstance) {
-    logger.debug('[WasmSandbox] loadWasmModule: 缓存命中，直接返回');
-    return wasmInstance;
-  }
-
-  const t0 = performance.now();
-  // 检查 WASM 文件是否存在
-  const exists = fs.existsSync(WASM_MODULE_PATH);
-  const tExist = performance.now();
-  logger.debug(`[WasmSandbox] loadWasmModule: fs.existsSync=${exists}, elapsed=${(tExist - t0).toFixed(2)}ms`);
-
-  if (!exists) {
-    logger.info('[WasmSandbox] WASM 模块未就绪（文件不存在），使用启发式分析降级方案');
-    metrics.inc('wasm_module_not_found', 1);
-    return null;
-  }
-
-  try {
-    const tRead = performance.now();
-    const wasmBuffer = fs.readFileSync(WASM_MODULE_PATH);
-    const tCompile = performance.now();
-    const module = await WebAssembly.compile(wasmBuffer);
-    wasmInstance = module;
-    logger.info(
-      `[WasmSandbox] WASM 模块加载成功: size=${wasmBuffer.length}B, read=${(tCompile - tRead).toFixed(2)}ms, compile=${(performance.now() - tCompile).toFixed(2)}ms, total=${(performance.now() - t0).toFixed(2)}ms`
-    );
-    metrics.inc('wasm_module_loaded', 1);
-    return module;
-  } catch (e) {
-    logger.warn(`[WasmSandbox] WASM 模块加载失败: ${e.message}，使用启发式分析 (elapsed=${(performance.now() - t0).toFixed(2)}ms)`);
-    metrics.inc('wasm_module_load_failed', 1);
-    return null;
-  }
+  await initAnalysisMode();
+  if (analysisMode === 'native') return wasmInstance;
+  return null;
 }
 
 /**
  * 启发式本地分析（WASM 不可用时的降级方案）
  * 分析 PE 特征、可疑 API、熵值等
+ * @param {string} filePath - 文件路径
+ * @param {Object} hashes - 文件哈希（可选，避免重复计算）
+ * @param {Buffer|null} fileData - 已读取的文件数据（由 scanFile 传入，避免重复读文件）
  */
-function heuristicAnalysis(filePath, hashes) {
+function heuristicAnalysis(filePath, hashes, fileData = null) {
   const startTime = Date.now();
   const t0 = performance.now();
   try {
     const tRead = performance.now();
-    const data = fs.readFileSync(filePath);
+    const data = fileData || fs.readFileSync(filePath);
     const fileSize = data.length;
     const tReadDone = performance.now();
     logger.debug(`[WasmSandbox] heuristicAnalysis: 文件读取 ${fileSize}B, read_time=${(tReadDone - tRead).toFixed(2)}ms`);
@@ -304,7 +322,9 @@ function getStats() {
   const malicious = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE verdict = 'malicious'").get();
   const suspicious = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE verdict = 'suspicious'").get();
   const clean = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE verdict = 'clean'").get();
-  const wasmNative = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE sandbox_engine = 'wasm' AND fallback_reason IS NULL").get();
+  const wasmNative = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE sandbox_engine = 'wasm_soft' OR sandbox_engine = 'wasm' AND fallback_reason IS NULL").get();
+  const wasmSoft = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE sandbox_engine = 'wasm_soft'").get();
+  const wasmHeuristic = db.prepare("SELECT COUNT(*) as count FROM wasm_sandbox_logs WHERE sandbox_engine = 'wasm_heuristic'").get();
   logger.debug(`[WasmSandbox] getStats: total=${total.count}, malicious=${malicious.count}, suspicious=${suspicious.count}, clean=${clean.count}, elapsed=${(performance.now() - t0).toFixed(2)}ms`);
 
   return {
@@ -313,8 +333,9 @@ function getStats() {
     suspicious: suspicious.count,
     clean: clean.count,
     wasm_native: wasmNative.count,
-    wasm_pending: total.count - wasmNative.count,
-    wasm_pending_reason: 'WASM module not yet deployed'
+    wasm_soft: wasmSoft.count,
+    wasm_heuristic: wasmHeuristic.count,
+    current_mode: analysisMode
   };
 }
 
