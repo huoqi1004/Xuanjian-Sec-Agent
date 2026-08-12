@@ -106,6 +106,11 @@ async function initDatabase() {
       detection_source TEXT,
       model_score REAL,
       uploaded_by INTEGER,
+      status TEXT DEFAULT 'pending',
+      handled_at DATETIME,
+      handled_by INTEGER,
+      action_type TEXT,
+      quarantine_path TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (uploaded_by) REFERENCES users(id)
     );

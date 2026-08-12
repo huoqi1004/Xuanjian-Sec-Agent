@@ -3,6 +3,7 @@ import { virusApi } from '@/api';
 import type { VirusHash, VirusScanReport } from '@/api';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
+import Dialog from '@/components/ui/dialog';
 import { Table } from '@/components/ui/table';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -48,6 +49,21 @@ function formatSize(bytes?: number): string {
   return (bytes / 1048576).toFixed(1) + ' MB';
 }
 
+function statusTag(s?: string): TagInfo {
+  const map: Record<string, TagInfo> = {
+    pending: { label: '待处置', variant: 'default' },
+    quarantined: { label: '已隔离', variant: 'warning' },
+    deleted: { label: '已删除', variant: 'danger' },
+    restored: { label: '已恢复', variant: 'success' },
+    ignored: { label: '已忽略', variant: 'default' }
+  };
+  return map[s || ''] || { label: s || '-', variant: 'default' };
+}
+
+function statusText(s?: string): string {
+  return statusTag(s).label;
+}
+
 /** 引擎进度（与 Vue 版一致的前 5 个引擎） */
 interface EngineProgress {
   name: string;
@@ -84,6 +100,7 @@ interface HistoryRow {
   confidence: string;
   time: string;
   scanId?: string;
+  status?: string;
 }
 
 interface DetectResult {
@@ -134,6 +151,10 @@ export default function Virus() {
   const [records, setRecords] = useState<HistoryRow[]>([]);
   const [recordPage, setRecordPage] = useState(1);
 
+  // 处置操作状态
+  const [deleting, setDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<HistoryRow | null>(null);
+
   // 报告对话框
   const [showReport, setShowReport] = useState(false);
   const [reportContent, setReportContent] = useState('');
@@ -157,7 +178,9 @@ export default function Virus() {
           verdict: r.detection_result || 'benign',
           source: r.detection_source || '未知',
           confidence: r.model_score ? (r.model_score * 100).toFixed(1) : '-',
-          time: r.created_at ? new Date(r.created_at).toLocaleString('zh-CN') : '-'
+          time: r.created_at ? new Date(r.created_at).toLocaleString('zh-CN') : '-',
+          scanId: r.id ? String(r.id) : undefined,
+          status: r.status || 'pending'
         }))
       );
     } catch {
@@ -285,6 +308,44 @@ export default function Virus() {
       setHashResults([]);
     }
     setAnalyzing(false);
+  }
+
+  async function handleQuarantine(scanId: string) {
+    try {
+      await virusApi.quarantine(scanId);
+      toast({ title: '文件已隔离', variant: 'success' });
+      loadRecords();
+    } catch {
+      toast({ title: '隔离失败', variant: 'error' });
+    }
+  }
+
+  async function handleRestore(scanId: string) {
+    try {
+      await virusApi.restore(scanId);
+      toast({ title: '文件已恢复', variant: 'success' });
+      loadRecords();
+    } catch {
+      toast({ title: '恢复失败', variant: 'error' });
+    }
+  }
+
+  function openDeleteDialog(row: HistoryRow) {
+    setDeleteTarget(row);
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget || !deleteTarget.scanId) return;
+    setDeleting(true);
+    try {
+      await virusApi.delete(deleteTarget.scanId);
+      toast({ title: '文件已删除', variant: 'success' });
+      setDeleteTarget(null);
+      loadRecords();
+    } catch {
+      toast({ title: '删除失败', variant: 'error' });
+    }
+    setDeleting(false);
   }
 
   const paginatedRecords = useMemo(() => {
@@ -554,7 +615,7 @@ export default function Virus() {
           <tbody className="divide-y divide-white/5">
             {paginatedRecords.map((r) => (
               <tr key={r.id} className="hover:bg-white/5">
-                <td className="max-w-[200px] truncate px-2 py-2 text-gray-300">{r.filename}</td>
+                <td className="max-w-[160px] truncate px-2 py-2 text-gray-300">{r.filename}</td>
                 <td className="px-2 py-2 font-mono text-[11px] text-gray-400">
                   {r.hash ? r.hash.substring(0, 12) + '...' : '-'}
                 </td>
@@ -562,25 +623,59 @@ export default function Virus() {
                 <td className="px-2 py-2">
                   <Badge variant={verdictTag(r.verdict).variant}>{verdictTag(r.verdict).label}</Badge>
                 </td>
+                <td className="px-2 py-2">
+                  <Badge variant={statusTag(r.status).variant}>{statusText(r.status)}</Badge>
+                </td>
                 <td className="px-2 py-2 text-gray-300">{r.source}</td>
                 <td className="px-2 py-2 text-gray-400">{r.confidence}</td>
                 <td className="px-2 py-2 text-gray-400">{r.time}</td>
                 <td className="px-2 py-2">
-                  {r.scanId && (
-                    <button
-                      type="button"
-                      onClick={() => viewReport(r.scanId)}
-                      className="text-xs text-cyan-400 transition-colors hover:text-cyan-300"
-                    >
-                      报告
-                    </button>
-                  )}
+                  <div className="flex flex-wrap gap-1 items-center">
+                    {r.scanId && (
+                      <button
+                        type="button"
+                        onClick={() => viewReport(r.scanId)}
+                        className="text-xs text-cyan-400 transition-colors hover:text-cyan-300"
+                      >
+                        报告
+                      </button>
+                    )}
+                    {r.status === 'pending' && (r.verdict === 'malicious' || r.verdict === 'suspicious' || r.verdict === 'poisoned') && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => r.scanId && handleQuarantine(r.scanId)}
+                          disabled={!r.scanId}
+                          className="text-xs text-amber-400 transition-colors hover:text-amber-300 disabled:text-gray-600"
+                        >
+                          隔离
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => r.scanId && openDeleteDialog(r)}
+                          disabled={!r.scanId}
+                          className="text-xs text-red-400 transition-colors hover:text-red-300 disabled:text-gray-600"
+                        >
+                          删除
+                        </button>
+                      </>
+                    )}
+                    {r.status === 'quarantined' && r.scanId && (
+                      <button
+                        type="button"
+                        onClick={() => handleRestore(r.scanId!)}
+                        className="text-xs text-green-400 transition-colors hover:text-green-300"
+                      >
+                        恢复
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
             {paginatedRecords.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-2 py-6 text-center text-gray-500">
+                <td colSpan={9} className="px-2 py-6 text-center text-gray-500">
                   暂无扫描记录
                 </td>
               </tr>
@@ -604,6 +699,27 @@ export default function Virus() {
           </Button>
         </div>
       </div>
+
+      {/* 删除确认弹窗 */}
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="删除确认"
+        footer={
+          <>
+            <Button size="sm" variant="outline" onClick={() => setDeleteTarget(null)}>
+              取消
+            </Button>
+            <Button size="sm" variant="destructive" disabled={deleting} onClick={confirmDelete}>
+              {deleting ? '删除中…' : '确认删除'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-300">
+          确定要删除文件「{deleteTarget?.filename}」吗？此操作不可恢复。
+        </p>
+      </Dialog>
 
       {/* 查杀报告弹窗 */}
       {showReport && (

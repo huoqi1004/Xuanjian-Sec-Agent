@@ -255,6 +255,16 @@ export interface VirusRecord {
   model_score?: number;
   uploaded_by?: number;
   created_at?: string;
+  /** 处置状态: pending | quarantined | deleted | restored | ignored */
+  status?: string;
+  /** 处置时间 */
+  handled_at?: string;
+  /** 处置人 */
+  handled_by?: string;
+  /** 处置动作 */
+  action_type?: string;
+  /** 隔离路径 */
+  quarantine_path?: string;
 }
 
 export interface VirusHash {
@@ -350,6 +360,25 @@ export const virusApi = {
       method: 'POST',
       url: '/virus/export-report',
       data: { scanId, format }
+    }),
+  /** 隔离恶意文件（处置状态机） */
+  quarantine: (scanId: string) =>
+    requestData<{ success: boolean; message?: string; record?: unknown }>({
+      method: 'POST',
+      url: `/virus/${scanId}/quarantine`
+    }),
+  /** 恢复已隔离文件（处置状态机） */
+  restore: (scanId: string) =>
+    requestData<{ success: boolean; message?: string; record?: unknown }>({
+      method: 'POST',
+      url: `/virus/${scanId}/restore`
+    }),
+  /** 删除恶意文件（需二次确认 confirm=true） */
+  delete: (scanId: string, reason?: string) =>
+    requestData<{ success: boolean; message?: string; reason?: string }>({
+      method: 'POST',
+      url: `/virus/${scanId}/delete`,
+      data: { confirm: true, reason: reason || '' }
     })
 };
 

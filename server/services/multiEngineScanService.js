@@ -33,20 +33,29 @@ class MultiEngineScanService {
 
         logger.info(`[多引擎扫描] 开始扫描: ${file.originalname} (${(file.size / 1024).toFixed(1)}KB)`);
 
-        // 1. 计算文件哈希
-        const hashes = this._calculateHashes(file.path);
+        // 一次性读取文件，供所有引擎共享（避免各引擎重复 readFileSync）
+        let fileData = null;
+        try {
+            fileData = fs.readFileSync(file.path);
+        } catch (e) {
+            logger.error(`[多引擎扫描] 文件读取失败: ${e.message}`);
+            return { scanId, error: e.message, decision: { verdict: 'unknown', confidence: 0, recommendation: '文件读取失败' } };
+        }
+
+        // 1. 计算文件哈希（复用 fileData，不再重复读取）
+        const hashes = this._calculateHashes(fileData);
         logger.info(`[多引擎扫描] MD5: ${hashes.md5}, SHA256: ${hashes.sha256}`);
 
-        // 2. 并行执行所有引擎扫描
+        // 2. 并行执行所有引擎扫描（全部复用 fileData）
         const engineResults = await Promise.allSettled([
             this._scanLocalHash(hashes),
             this._scan360Ti(hashes),
-            this._scanKaspersky(file.path, file.originalname),
-            this._scanAIMalware(file.path),
-            this._scanAIPoisoning(file.path, hashes),
+            this._scanKaspersky(fileData, file.originalname),
+            this._scanAIMalware(file.path, fileData),
+            this._scanAIPoisoning(file.path, hashes, fileData),
             this._scan360VirusDB(hashes),
-            this._scanFileEntropy(file.path),
-            this._scanGANCHomaly(file.path)   // 引擎8: GAN异常检测
+            this._scanFileEntropy(fileData),
+            this._scanGANCHomaly(file.path, fileData)
         ]);
 
         // 3. 收集各引擎结果
@@ -57,7 +66,8 @@ class MultiEngineScanService {
             { name: 'AI恶意代码检测', key: 'ai_malware', icon: 'cpu' },
             { name: 'AI投毒检测', key: 'ai_poisoning', icon: 'warning' },
             { name: '360病毒特征库', key: '360_virus_db', icon: 'virus' },
-            { name: '文件熵值分析', key: 'entropy', icon: 'chart' }
+            { name: '文件熵值分析', key: 'entropy', icon: 'chart' },
+            { name: 'GAN异常检测', key: 'gan_anomaly', icon: 'brain' }
         ];
 
         const engineResultsMap = {};
@@ -110,7 +120,7 @@ class MultiEngineScanService {
             const highEntropy = entropyResult && entropyResult.verdict === 'suspicious';
             if (allUnknown && highEntropy) {
                 logger.info('[多引擎扫描] 所有引擎 unknown + 熵值异常，触发沙箱分析');
-                const sandboxResult = await this._sandboxAnalysis(file, hashes);
+                const sandboxResult = await this._sandboxAnalysis(file, hashes, fileData);
                 engineResultsMap['sandbox'] = sandboxResult;
                 if (sandboxResult.verdict === 'malicious') {
                     decision.verdict = 'malicious';
@@ -151,7 +161,7 @@ class MultiEngineScanService {
             if (!fs.existsSync(detailDir)) fs.mkdirSync(detailDir, { recursive: true });
             const detailPath = path.join(detailDir, `scan_${scanId}.json`);
             fs.writeFileSync(detailPath, JSON.stringify({
-                scanId, file: file.originalname, hashes, engineResults: engineResultsMap,
+                scanId, file: file.originalname, filePath: file.path, hashes, engineResults: engineResultsMap,
                 decision, report, scannedAt: new Date().toISOString(), scannedBy: userId
             }, null, 2));
 
@@ -188,9 +198,9 @@ class MultiEngineScanService {
 
     /**
      * 计算文件哈希（一次读取，并行计算 MD5/SHA1/SHA256）
+     * @param {Buffer} data - 已读取的文件数据
      */
-    _calculateHashes(filePath) {
-        const data = fs.readFileSync(filePath);
+    _calculateHashes(data) {
         return {
             md5: crypto.createHash('md5').update(data).digest('hex'),
             sha1: crypto.createHash('sha1').update(data).digest('hex'),
@@ -301,8 +311,9 @@ class MultiEngineScanService {
 
     /**
      * 引擎3: 卡巴斯基OpenTIP API
+     * @param {Buffer} fileData - 已读取的文件数据
      */
-    async _scanKaspersky(filePath, fileName) {
+    async _scanKaspersky(fileData, fileName) {
         const start = Date.now();
         try {
             const db = getDb();
@@ -311,8 +322,6 @@ class MultiEngineScanService {
             if (!apiKey) {
                 return { engine: '卡巴斯基OpenTIP', status: 'skipped', verdict: 'unknown', confidence: 0, detail: '未配置卡巴斯基API Key', responseTime: Date.now() - start };
             }
-
-            const fileData = fs.readFileSync(filePath);
 
             if (fileData.length > 50 * 1024 * 1024) {
                 return { engine: '卡巴斯基OpenTIP', status: 'skipped', verdict: 'unknown', confidence: 0, detail: '文件超过50MB限制', responseTime: Date.now() - start };
@@ -366,12 +375,14 @@ class MultiEngineScanService {
 
     /**
      * 引擎4: AI恶意代码检测
+     * @param {string} filePath - 文件路径（用于 aiService 内部处理）
+     * @param {Buffer} fileData - 已读取的文件数据，避免重复读取
      */
-    async _scanAIMalware(filePath) {
+    async _scanAIMalware(filePath, fileData) {
         const start = Date.now();
         try {
             logger.info(`[AI恶意代码检测] 开始AI检测: ${filePath}`);
-            const result = await aiService.detectMalware(filePath);
+            const result = await aiService.detectMalware(filePath, fileData);
             logger.info(`[AI恶意代码检测] 完成 | is_malicious=${result.is_malicious} | score=${result.score.toFixed(4)} | method=${result.method || 'unknown'} | anomalies=${JSON.stringify(result.anomalies || [])}`);
             return {
                 engine: 'AI恶意代码检测', status: 'completed',
@@ -390,11 +401,14 @@ class MultiEngineScanService {
 
     /**
      * 引擎5: AI投毒检测
+     * @param {string} filePath - 文件路径
+     * @param {Object} hashes - 文件哈希
+     * @param {Buffer} fileData - 已读取的文件数据，避免重复读取
      */
-    async _scanAIPoisoning(filePath, hashes) {
+    async _scanAIPoisoning(filePath, hashes, fileData) {
         const start = Date.now();
         try {
-            const result = await aiService.detectPoisoning(filePath);
+            const result = await aiService.detectPoisoning(filePath, fileData);
             return {
                 engine: 'AI投毒检测', status: 'completed',
                 verdict: result.is_poisoned ? 'poisoned' : 'clean',
@@ -486,15 +500,20 @@ class MultiEngineScanService {
     _scanFileEntropy(fileData) {
         const start = Date.now();
         try {
-            // 优先使用已读取的数据，回退到文件路径读取
+            // 支持两种入参：文件路径字符串（由 scanFile 传入）或已读取的 Buffer
             let data;
-            if (fileData) {
+            let label = 'unknown';
+            if (Buffer.isBuffer(fileData)) {
                 data = fileData;
+                label = `buffer(${fileData.length}B)`;
+            } else if (typeof fileData === 'string' && fileData) {
+                data = fs.readFileSync(fileData);
+                label = fileData;
             } else {
-                data = fs.readFileSync(file.path);
+                return { engine: '文件熵值分析', status: 'error', verdict: 'unknown', confidence: 0, detail: '缺少文件数据或路径', responseTime: Date.now() - start };
             }
             const fileSize = data.length;
-            logger.info(`[文件熵值分析] 开始分析: ${file.path || 'unknown'} | 文件大小: ${fileSize} bytes`);
+            logger.info(`[文件熵值分析] 开始分析: ${label} | 文件大小: ${fileSize} bytes`);
             if (fileSize === 0) {
                 return { engine: '文件熵值分析', status: 'completed', verdict: 'unknown', confidence: 0, detail: '空文件', responseTime: Date.now() - start };
             }
@@ -546,10 +565,10 @@ class MultiEngineScanService {
 
     /**
      * 引擎8: GAN 异常检测
-     * 调用 ai-service Python 微服务的 /api/gan/anomaly 接口
-     * 返回 reconstruction_error, is_anomaly, confidence
+     * @param {string} filePath - 文件路径
+     * @param {Buffer} fileData - 已读取的文件数据，避免重复读取
      */
-    async _scanGANCHomaly(filePath) {
+    async _scanGANCHomaly(filePath, fileData) {
         const start = Date.now();
         const ganConfig = config.gan;
 
@@ -565,25 +584,20 @@ class MultiEngineScanService {
             };
         }
 
-        // 大文件跳过（超时保护）
-        try {
-            const stat = fs.statSync(filePath);
-            if (stat.size > 5 * 1024 * 1024) {  // > 5MB 跳过
-                return {
-                    engine: 'GAN异常检测',
-                    status: 'skipped',
-                    verdict: 'unknown',
-                    confidence: 0,
-                    detail: `文件过大(${(stat.size / 1024 / 1024).toFixed(1)}MB)，跳过 GAN 分析`,
-                    responseTime: Date.now() - start
-                };
-            }
-        } catch (e) {
-            // stat 失败不影响主流程
+        // 大文件跳过（复用 fileData.length，去除重复 statSync）
+        if (fileData.length > 5 * 1024 * 1024) {
+            return {
+                engine: 'GAN异常检测',
+                status: 'skipped',
+                verdict: 'unknown',
+                confidence: 0,
+                detail: `文件过大(${(fileData.length / 1024 / 1024).toFixed(1)}MB)，跳过 GAN 分析`,
+                responseTime: Date.now() - start
+            };
         }
 
         try {
-            const result = await aiService.callGANAnalysis(filePath);
+            const result = await aiService.callGANAnalysis(filePath, fileData);
 
             if (!result) {
                 return {
@@ -936,7 +950,7 @@ class MultiEngineScanService {
         }
 
         // 降级：启发式本地沙箱分析
-        const info = this._heuristicSandboxAnalysis(file.path, hashes);
+        const info = this._heuristicSandboxAnalysis(file.path, hashes, fileData);
         logger.info(`[沙箱] 启发式分析完成: verdict=${info.verdict} | confidence=${info.confidence.toFixed(2)}`);
         return {
             engine: '动态沙箱',
@@ -1034,19 +1048,192 @@ class MultiEngineScanService {
     }
 
     /**
-     * 获取扫描报告（N-01：对象级校验，非管理员仅本人扫描可见）
+     * 读取扫描报告文件（内部助手，不含租户校验）
      */
-    getScanReport(scanId, tenant) {
+    _readReportFile(scanId) {
         const reportDir = path.join(__dirname, '../../data/scan_reports');
         const reportPath = path.join(reportDir, `scan_${scanId}.json`);
-        if (!fs.existsSync(reportPath)) {
+        if (!fs.existsSync(reportPath)) return null;
+        try {
+            return JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+        } catch (e) {
             return null;
         }
-        const data = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+    }
+
+    /**
+     * 根据报告中的文件哈希定位 virus_scan_records 台账记录
+     */
+    _findRecordByReport(data) {
+        const db = getDb();
+        const hashes = data.hashes || {};
+        let record = null;
+        if (hashes.sha256) {
+            record = db.prepare('SELECT * FROM virus_scan_records WHERE file_hash_sha256 = ? ORDER BY id DESC LIMIT 1').get(hashes.sha256);
+        }
+        if (!record && hashes.md5) {
+            record = db.prepare('SELECT * FROM virus_scan_records WHERE file_hash_md5 = ? ORDER BY id DESC LIMIT 1').get(hashes.md5);
+        }
+        return record || null;
+    }
+
+    /**
+     * 获取扫描报告（N-01：对象级校验，非管理员仅本人扫描可见）
+     * 合并处置台账（status/action_type/handled_at 等来自 virus_scan_records）
+     */
+    getScanReport(scanId, tenant) {
+        const data = this._readReportFile(scanId);
+        if (!data) return null;
         if (!require('../utils/tenantHelpers').isOwner(tenant, { uploaded_by: data.scannedBy }, 'uploaded_by')) {
             return null;
         }
+        const record = this._findRecordByReport(data);
+        if (record) {
+            data.disposal = {
+                status: record.status || 'pending',
+                action_type: record.action_type || null,
+                handled_at: record.handled_at || null,
+                handled_by: record.handled_by || null,
+                quarantine_path: record.quarantine_path || null
+            };
+        }
         return data;
+    }
+
+    /**
+     * 处置前置校验：报告存在 + 租户/对象级权限 + 台账记录存在
+     */
+    _requireDisposal(scanId, tenant) {
+        const data = this._readReportFile(scanId);
+        if (!data) return { error: '未找到扫描报告' };
+        if (!require('../utils/tenantHelpers').isOwner(tenant, { uploaded_by: data.scannedBy }, 'uploaded_by')) {
+            return { error: '无权访问该扫描记录' };
+        }
+        const record = this._findRecordByReport(data);
+        if (!record) return { error: '未找到扫描台账记录' };
+        return { data, record };
+    }
+
+    /** 处置审计：action_logs + audit_logs 双落库 */
+    _writeDisposalAudit({ action, record, detail, userId, username }) {
+        const db = getDb();
+        db.prepare('INSERT INTO action_logs (policy_id, action_type, action_detail, result) VALUES (?, ?, ?, ?)')
+            .run(null, `${action}_file`, detail, 'success');
+        db.prepare('INSERT INTO audit_logs (user_id, username, operation_type, operation_target, operation_detail, result) VALUES (?, ?, ?, ?, ?, ?)')
+            .run(userId, username || 'system', 'virus_disposal', `scan:${record.file_name || record.id}`, detail, 'success');
+    }
+
+    /**
+     * 隔离恶意文件（API 处置）：移动物理文件 + 更新台账 + 审计
+     */
+    async quarantineScanRecord(scanId, tenant, userId, username) {
+        const { data, record, error } = this._requireDisposal(scanId, tenant);
+        if (error) return { error };
+        if (record.status === 'deleted') return { error: '该记录已删除，无法隔离' };
+        if (record.status === 'quarantined') return { error: '该记录已处于隔离状态' };
+
+        const db = getDb();
+        const { config } = require('../config');
+        const quarantineDir = (config.virusScan && config.virusScan.quarantineDir) || './data/quarantine';
+        let quarantinePath = null;
+        let detail = '';
+
+        const srcPath = data.filePath;
+        if (srcPath && fs.existsSync(srcPath)) {
+            fs.mkdirSync(quarantineDir, { recursive: true });
+            const fileName = typeof data.file === 'string' ? data.file : 'unknown';
+            const dest = path.join(quarantineDir, `${Date.now()}-${path.basename(fileName)}`);
+            try {
+                fs.renameSync(srcPath, dest);
+            } catch (moveErr) {
+                if (moveErr.code === 'EXDEV') {
+                    fs.copyFileSync(srcPath, dest);
+                    fs.unlinkSync(srcPath);
+                } else {
+                    throw moveErr;
+                }
+            }
+            quarantinePath = dest;
+            detail = `隔离恶意文件 ${fileName} -> ${dest}`;
+        } else {
+            detail = `隔离台账更新（原文件路径未知或已不存在: ${srcPath || 'N/A'}）`;
+        }
+
+        const now = new Date().toISOString();
+        db.prepare('UPDATE virus_scan_records SET status = ?, action_type = ?, handled_at = ?, handled_by = ?, quarantine_path = ? WHERE id = ?')
+            .run('quarantined', 'quarantine', now, userId, quarantinePath, record.id);
+        this._writeDisposalAudit({ action: 'quarantine', record, detail, userId, username });
+        logger.info(`[病毒处置] 隔离完成: ${record.file_name} (scanId=${scanId})`);
+        return { scanId, status: 'quarantined', action_type: 'quarantine', quarantine_path: quarantinePath, handled_at: now, handled_by: userId, detail };
+    }
+
+    /**
+     * 恢复隔离文件（API 处置）：移回原路径/上传目录 + 更新台账 + 审计
+     */
+    async restoreScanRecord(scanId, tenant, userId, username) {
+        const { data, record, error } = this._requireDisposal(scanId, tenant);
+        if (error) return { error };
+        if (record.status !== 'quarantined') return { error: '仅隔离状态的记录可恢复' };
+
+        const db = getDb();
+        const quarantinePath = record.quarantine_path;
+        let detail = '';
+        if (quarantinePath && fs.existsSync(quarantinePath)) {
+            const srcPath = data.filePath;
+            const target = (srcPath && fs.existsSync(path.dirname(srcPath)))
+                ? srcPath
+                : path.join('uploads', 'virus', path.basename(quarantinePath));
+            try {
+                fs.renameSync(quarantinePath, target);
+            } catch (moveErr) {
+                if (moveErr.code === 'EXDEV') {
+                    fs.copyFileSync(quarantinePath, target);
+                    fs.unlinkSync(quarantinePath);
+                } else {
+                    throw moveErr;
+                }
+            }
+            detail = `恢复文件: ${quarantinePath} -> ${target}`;
+        } else {
+            detail = '恢复台账（隔离文件已不存在，仅更新状态）';
+        }
+
+        const now = new Date().toISOString();
+        db.prepare('UPDATE virus_scan_records SET status = ?, action_type = ?, handled_at = ?, handled_by = ?, quarantine_path = NULL WHERE id = ?')
+            .run('restored', 'restore', now, userId, record.id);
+        this._writeDisposalAudit({ action: 'restore', record, detail, userId, username });
+        logger.info(`[病毒处置] 恢复完成: ${record.file_name} (scanId=${scanId})`);
+        return { scanId, status: 'restored', action_type: 'restore', handled_at: now, handled_by: userId, detail };
+    }
+
+    /**
+     * 删除恶意文件（API 处置，需二次确认 confirm=true）：删除物理文件 + 更新台账 + 审计
+     */
+    async deleteScanRecord(scanId, tenant, userId, username, confirm = false) {
+        if (confirm !== true) return { error: '删除操作需要二次确认（confirm=true）' };
+        const { data, record, error } = this._requireDisposal(scanId, tenant);
+        if (error) return { error };
+        if (record.status === 'deleted') return { error: '该记录已删除' };
+
+        const db = getDb();
+        const srcPath = data.filePath;
+        let detail = '';
+        if (srcPath && fs.existsSync(srcPath)) {
+            fs.unlinkSync(srcPath);
+            detail = `删除恶意文件: ${srcPath}`;
+        } else if (record.quarantine_path && fs.existsSync(record.quarantine_path)) {
+            fs.unlinkSync(record.quarantine_path);
+            detail = `删除隔离区文件: ${record.quarantine_path}`;
+        } else {
+            detail = '删除台账（原文件已不存在，仅更新状态）';
+        }
+
+        const now = new Date().toISOString();
+        db.prepare('UPDATE virus_scan_records SET status = ?, action_type = ?, handled_at = ?, handled_by = ? WHERE id = ?')
+            .run('deleted', 'delete', now, userId, record.id);
+        this._writeDisposalAudit({ action: 'delete', record, detail, userId, username });
+        logger.warn(`[病毒处置] 删除完成: ${record.file_name} (scanId=${scanId})`);
+        return { scanId, status: 'deleted', action_type: 'delete', handled_at: now, handled_by: userId, detail };
     }
 }
 

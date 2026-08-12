@@ -914,12 +914,13 @@ async function chatAssistant(conversationId, userMessage) {
  * @param {string} filePath - 本地文件路径
  * @returns {Object|null} Python 服务返回的检测结果；调用失败返回 null
  */
-async function callAiServiceFileDetection(endpoint, filePath) {
+async function callAiServiceFileDetection(endpoint, filePath, fileBuffer = null) {
   metrics.inc('ai_calls_total', { provider: 'python' }, 1, 'AI 调用次数');
   try {
-    if (!fs.existsSync(filePath)) throw new Error('文件不存在');
-
-    const fileBuffer = fs.readFileSync(filePath);
+    if (!fileBuffer) {
+      if (!fs.existsSync(filePath)) throw new Error('文件不存在');
+      fileBuffer = fs.readFileSync(filePath);
+    }
     const boundary = '----XuanJian' + Date.now() + Math.random().toString(16).slice(2);
     const filename = path.basename(filePath).replace(/[^a-zA-Z0-9._-]/g, '_');
 
@@ -947,9 +948,9 @@ async function callAiServiceFileDetection(endpoint, filePath) {
  * 本地降级检测：Python AI 服务不可用时，使用轻量规则（熵值 + 可执行头 + 可疑字符串）
  * @returns {Object} 与 Python 服务结构一致的检测结果
  */
-function degradeMalwareDetect(filePath) {
+function degradeMalwareDetect(filePath, fileBuffer = null) {
   try {
-    const data = fs.readFileSync(filePath);
+    const data = fileBuffer || fs.readFileSync(filePath);
     const entropy = calculateEntropy(data);
     let score = 0;
     const anomalies = [];
@@ -1001,8 +1002,8 @@ function calculateEntropy(data) {
  * 优先调用 Python AI 微服务（真实 PE 特征 + 规则引擎/GBDT），失败时降级本地规则。
  * 不再使用 LLM 基于文件名/大小进行不可靠分析。
  */
-async function detectMalware(filePath) {
-  const result = await callAiServiceFileDetection('/api/detect/malware', filePath);
+async function detectMalware(filePath, fileBuffer = null) {
+  const result = await callAiServiceFileDetection('/api/detect/malware', filePath, fileBuffer);
   if (result && typeof result.is_malicious === 'boolean') {
     return {
       is_malicious: result.is_malicious,
@@ -1015,7 +1016,7 @@ async function detectMalware(filePath) {
     };
   }
   logger.warn('[AI服务] Python 恶意检测不可用，使用本地降级规则');
-  return degradeMalwareDetect(filePath);
+  return degradeMalwareDetect(filePath, fileBuffer);
 }
 
 /**
@@ -1337,10 +1338,10 @@ function truncateMessagesToBudget(messages, maxTokens) {
  * 调用 AI 微服务的 GAN 分析接口
  * 复用 callAiServiceFileDetection，路径为 /api/gan/anomaly
  */
-async function callGANAnalysis(filePath) {
+async function callGANAnalysis(filePath, fileBuffer = null) {
   const start = Date.now();
   try {
-    const result = await callAiServiceFileDetection('/api/gan/anomaly', filePath);
+    const result = await callAiServiceFileDetection('/api/gan/anomaly', filePath, fileBuffer);
     const elapsed = Date.now() - start;
     logger.info(`[aiService.GAN] GAN分析完成: ${filePath} | ${elapsed}ms | is_anomaly=${result?.is_anomaly}`);
     return result;

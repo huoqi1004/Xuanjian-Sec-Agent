@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { agentApi } from '@/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { agentApi, virusApi } from '@/api';
+import type { VirusRecord } from '@/api';
 import Badge from '@/components/ui/badge';
 import Button from '@/components/ui/button';
 import Card, { CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -55,6 +56,44 @@ function renderJson(data: unknown) {
   } catch {
     return String(data);
   }
+}
+
+/** 病毒查杀相关工具名称 */
+const VIRUS_TOOLS = new Set(['scan_virus_file', 'analyze_virus_hash_v2', 'get_virus_report', 'quarantine_virus_file', 'restore_virus_file', 'delete_virus_file']);
+
+/** 判定结果 → 颜色 variant */
+function verdictVariant(v?: string): 'success' | 'warning' | 'danger' | 'default' {
+  if (v === 'malicious' || v === 'poisoned') return 'danger';
+  if (v === 'suspicious') return 'warning';
+  if (v === 'clean') return 'success';
+  return 'default';
+}
+
+/** 判定结果 → 中文文本 */
+function verdictText(v?: string): string {
+  if (v === 'malicious') return '恶意';
+  if (v === 'poisoned') return '投毒';
+  if (v === 'suspicious') return '疑似';
+  if (v === 'clean') return '安全';
+  return v || '未知';
+}
+
+/** 处置状态 → 颜色 variant */
+function statusVariant(s?: string): 'success' | 'warning' | 'danger' | 'default' {
+  if (s === 'quarantined') return 'warning';
+  if (s === 'deleted') return 'danger';
+  if (s === 'restored') return 'success';
+  if (s === 'ignored') return 'default';
+  return 'default';
+}
+
+function statusText(s?: string): string {
+  if (s === 'pending') return '待处置';
+  if (s === 'quarantined') return '已隔离';
+  if (s === 'deleted') return '已删除';
+  if (s === 'restored') return '已恢复';
+  if (s === 'ignored') return '已忽略';
+  return s || '-';
 }
 
 export default function AgentWorkbench() {
@@ -130,6 +169,7 @@ export default function AgentWorkbench() {
     try {
       const r = (await agentApi.run(task.trim())) as AgentRunResult;
       setResult(r);
+      extractVirusResult(r);
       const confirm = r.results?.find((x) => x.require_confirmation && x.confirmation_id);
       if (confirm) {
         setConfirmItem(confirm);
@@ -173,6 +213,39 @@ export default function AgentWorkbench() {
       // http 拦截器已提示
     }
   }
+
+  /** 从 agent 结果中提取最近一条病毒查杀记录 */
+  const extractVirusResult = useCallback((r: AgentRunResult) => {
+    const virusStep = r.results?.find((x) => VIRUS_TOOLS.has(x.tool));
+    if (!virusStep) return;
+    const data = virusStep.data as VirusRecord | undefined;
+    if (data) setLastVirusResult(data);
+  }, []);
+
+  /** 处置操作 */
+  const handleVirusAction = useCallback(async (scanId: string, action: string) => {
+    if (!scanId) return;
+    setVirusActionLoading(scanId);
+    try {
+      if (action === 'quarantine') {
+        await virusApi.quarantine(scanId);
+        toast({ title: '文件已隔离', variant: 'success' });
+      } else if (action === 'restore') {
+        await virusApi.restore(scanId);
+        toast({ title: '文件已恢复', variant: 'success' });
+      } else if (action === 'delete') {
+        await virusApi.delete(scanId);
+        toast({ title: '文件已删除', variant: 'success' });
+      }
+      setLastVirusResult(null);
+      // 刷新 pending 队列
+      fetchPending();
+    } catch {
+      toast({ title: '操作失败', variant: 'error' });
+    } finally {
+      setVirusActionLoading(null);
+    }
+  }, [toast, fetchPending]);
 
   return (
     <div className="space-y-4">
@@ -238,7 +311,7 @@ export default function AgentWorkbench() {
         </Card>
       )}
 
-      {/* 执行结果 */}
+      {/* Agent 执行结果 */}
       {result && (
         <Card>
           <CardHeader>
@@ -272,6 +345,111 @@ export default function AgentWorkbench() {
             {result.summary && (
               <div className="mt-3 whitespace-pre-wrap border-t border-gray-100 pt-3 text-sm text-gray-700">
                 {result.summary}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 病毒查杀任务结果面板 */}
+      {lastVirusResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>病毒查杀结果</span>
+              <Badge variant={verdictVariant(lastVirusResult.detection_result)}>
+                {verdictText(lastVirusResult.detection_result)}
+              </Badge>
+              {lastVirusResult.status && (
+                <Badge variant={statusVariant(lastVirusResult.status)}>
+                  {statusText(lastVirusResult.status)}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="text-gray-500">文件名：</span>
+                <span className="font-medium text-gray-800">{lastVirusResult.file_name || '-'}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">大小：</span>
+                <span className="text-gray-800">
+                  {lastVirusResult.file_size ? (lastVirusResult.file_size / 1024).toFixed(1) + ' KB' : '-'}
+                </span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-gray-500">MD5：</span>
+                <code className="text-xs text-gray-600">{lastVirusResult.file_hash_md5 || '-'}</code>
+              </div>
+              {lastVirusResult.file_hash_sha256 && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">SHA256：</span>
+                  <code className="text-xs text-gray-600">{lastVirusResult.file_hash_sha256}</code>
+                </div>
+              )}
+              <div>
+                <span className="text-gray-500">判定来源：</span>
+                <span className="text-gray-800">{lastVirusResult.detection_source || '-'}</span>
+              </div>
+              {lastVirusResult.model_score != null && (
+                <div>
+                  <span className="text-gray-500">置信度：</span>
+                  <span className="text-gray-800">
+                    {(lastVirusResult.model_score * 100).toFixed(1)}%
+                  </span>
+                </div>
+              )}
+              {lastVirusResult.status === 'quarantined' && lastVirusResult.quarantine_path && (
+                <div className="col-span-2">
+                  <span className="text-gray-500">隔离路径：</span>
+                  <code className="text-xs text-gray-600">{lastVirusResult.quarantine_path}</code>
+                </div>
+              )}
+              {lastVirusResult.handled_at && (
+                <div>
+                  <span className="text-gray-500">处置时间：</span>
+                  <span className="text-gray-800">
+                    {new Date(lastVirusResult.handled_at).toLocaleString('zh-CN')}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* 处置操作按钮 */}
+            {lastVirusResult.status === 'pending' &&
+              (lastVirusResult.detection_result === 'malicious' ||
+                lastVirusResult.detection_result === 'suspicious' ||
+                lastVirusResult.detection_result === 'poisoned') && (
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={virusActionLoading !== null}
+                    onClick={() => handleVirusAction(String(lastVirusResult.id), 'quarantine')}
+                  >
+                    {virusActionLoading === String(lastVirusResult.id) ? '隔离中…' : '隔离文件'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={virusActionLoading !== null}
+                    onClick={() => handleVirusAction(String(lastVirusResult.id), 'delete')}
+                  >
+                    {virusActionLoading === String(lastVirusResult.id) ? '删除中…' : '删除文件'}
+                  </Button>
+                </div>
+              )}
+            {lastVirusResult.status === 'quarantined' && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={virusActionLoading !== null}
+                  onClick={() => handleVirusAction(String(lastVirusResult.id), 'restore')}
+                >
+                  {virusActionLoading === String(lastVirusResult.id) ? '恢复中…' : '恢复文件'}
+                </Button>
               </div>
             )}
           </CardContent>
